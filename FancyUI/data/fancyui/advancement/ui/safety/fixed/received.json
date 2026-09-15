@@ -1,0 +1,19 @@
+{
+  "criteria": {
+    "fancyui.fixed.received": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "predicates": {
+              "minecraft:custom_data": "{fancyui:{fixed:true}}"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "rewards": {
+    "function": "fancyui:ui/safety/fixed/advancements/received"
+  }
+}

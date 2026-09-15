@@ -1,0 +1,34 @@
+execute store result score #target_count sae.tmp run data get block ~ ~ ~ Items[{Slot:10b}].count
+execute unless score #target_count sae.tmp matches 1 run return 0
+execute if items block ~ ~ ~ container.12 minecraft:sponge run function sae:enchant/preview/book/sponge
+execute if items block ~ ~ ~ container.12 minecraft:spider_eye run function sae:enchant/preview/book/spider_eye
+execute if items block ~ ~ ~ container.12 minecraft:obsidian run function sae:enchant/preview/book/obsidian
+execute if items block ~ ~ ~ container.12 minecraft:amethyst_block run function sae:enchant/preview/book/amethyst_block
+execute if items block ~ ~ ~ container.12 minecraft:lightning_rod run function sae:enchant/preview/book/lightning_rod
+execute if items block ~ ~ ~ container.12 minecraft:iron_chain run function sae:enchant/preview/book/iron_chain
+execute if items block ~ ~ ~ container.12 minecraft:glass run function sae:enchant/preview/book/glass
+execute if items block ~ ~ ~ container.12 minecraft:gold_block run function sae:enchant/preview/book/gold_block
+execute if items block ~ ~ ~ container.12 minecraft:nautilus_shell run function sae:enchant/preview/book/nautilus_shell
+execute if items block ~ ~ ~ container.12 minecraft:redstone_block run function sae:enchant/preview/book/redstone_block
+execute if items block ~ ~ ~ container.12 minecraft:slime_block run function sae:enchant/preview/book/slime_block
+execute if items block ~ ~ ~ container.12 minecraft:blaze_rod run function sae:enchant/preview/book/blaze_rod
+execute if items block ~ ~ ~ container.12 minecraft:magma_cream run function sae:enchant/preview/book/magma_cream
+execute if items block ~ ~ ~ container.12 minecraft:diamond_block run function sae:enchant/preview/book/diamond_block
+execute if items block ~ ~ ~ container.12 minecraft:blue_ice run function sae:enchant/preview/book/blue_ice
+execute if items block ~ ~ ~ container.12 minecraft:prismarine_shard run function sae:enchant/preview/book/prismarine_shard
+execute if items block ~ ~ ~ container.12 minecraft:spectral_arrow run function sae:enchant/preview/book/spectral_arrow
+execute if items block ~ ~ ~ container.12 minecraft:piston run function sae:enchant/preview/book/piston
+execute if items block ~ ~ ~ container.12 minecraft:ender_pearl run function sae:enchant/preview/book/ender_pearl
+execute if items block ~ ~ ~ container.12 minecraft:pufferfish run function sae:enchant/preview/book/pufferfish
+execute if items block ~ ~ ~ container.12 minecraft:breeze_rod run function sae:enchant/preview/book/breeze_rod
+execute if items block ~ ~ ~ container.12 minecraft:tropical_fish run function sae:enchant/preview/book/tropical_fish
+execute if items block ~ ~ ~ container.12 minecraft:netherite_ingot run function sae:enchant/preview/book/netherite_ingot
+execute if items block ~ ~ ~ container.12 minecraft:dispenser run function sae:enchant/preview/book/dispenser
+execute if items block ~ ~ ~ container.12 minecraft:shield run function sae:enchant/preview/book/shield
+execute if items block ~ ~ ~ container.12 minecraft:diamond run function sae:enchant/preview/book/diamond
+execute if items block ~ ~ ~ container.12 minecraft:turtle_scute run function sae:enchant/preview/book/turtle_scute
+execute if items block ~ ~ ~ container.12 minecraft:glowstone run function sae:enchant/preview/book/glowstone
+execute if items block ~ ~ ~ container.12 minecraft:soul_sand run function sae:enchant/preview/book/soul_sand
+execute if items block ~ ~ ~ container.12 minecraft:sculk_sensor run function sae:enchant/preview/book/sculk_sensor
+execute if items block ~ ~ ~ container.12 minecraft:pointed_dripstone run function sae:enchant/preview/book/pointed_dripstone
+execute if items block ~ ~ ~ container.12 minecraft:iron_block run function sae:enchant/preview/book/iron_block

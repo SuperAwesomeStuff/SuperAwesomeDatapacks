@@ -1,0 +1,16 @@
+{
+  "criteria": {
+    "placed": {
+      "trigger": "minecraft:placed_block",
+      "conditions": {
+        "location": {
+          "type": "minecraft:match_block",
+          "blocks": "minecraft:enchanting_table"
+        }
+      }
+    }
+  },
+  "rewards": {
+    "function": "sae:workstation/place/start"
+  }
+}

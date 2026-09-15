@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:sequence",
+  "functions": [
+    {
+      "type": "minecraft:set_enchantments",
+      "enchantments": {
+        "minecraft:mending": 1
+      },
+      "add": false
+    },
+    {
+      "type": "minecraft:set_components",
+      "components": {
+        "minecraft:damage": 0
+      }
+    }
+  ]
+}

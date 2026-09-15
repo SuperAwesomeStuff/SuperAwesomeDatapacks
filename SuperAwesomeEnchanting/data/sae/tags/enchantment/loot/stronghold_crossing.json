@@ -1,0 +1,12 @@
+{
+  "values": [
+    "minecraft:protection",
+    "minecraft:projectile_protection",
+    "minecraft:sharpness",
+    "minecraft:efficiency",
+    "minecraft:fortune",
+    "minecraft:unbreaking",
+    "minecraft:feather_falling",
+    "minecraft:looting"
+  ]
+}

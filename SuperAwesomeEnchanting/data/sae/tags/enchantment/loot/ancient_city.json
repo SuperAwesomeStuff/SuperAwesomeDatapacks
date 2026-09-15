@@ -1,0 +1,12 @@
+{
+  "values": [
+    "minecraft:efficiency",
+    "minecraft:silk_touch",
+    "minecraft:protection",
+    "minecraft:projectile_protection",
+    "minecraft:feather_falling",
+    "minecraft:respiration",
+    "minecraft:unbreaking",
+    "minecraft:thorns"
+  ]
+}

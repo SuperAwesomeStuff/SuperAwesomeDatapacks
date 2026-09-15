@@ -2,7 +2,7 @@
 
 Super Awesome Datapacks is a private collection of Minecraft Java Edition system reworks for a small server of roughly 5-10 friends. The packs change parts of Minecraft that we find random, tedious, or overly restrictive without turning the game into something unfamiliar to a vanilla player.
 
-The project targets Minecraft Java Edition 26.3. Both active packs are currently in design and do not have playable releases.
+The project targets Minecraft Java Edition 26.3. Super Awesome Enchanting is ready for private-server playtesting. Super Awesome Villagers remains in design.
 
 ## Design principles
 
@@ -17,7 +17,7 @@ The project targets Minecraft Java Edition 26.3. Both active packs are currently
 
 | Pack | Status | Description |
 | --- | --- | --- |
-| [Super Awesome Enchanting](./SuperAwesomeEnchanting/README.md) | In design | Replaces random enchanting with deterministic catalyst upgrades, adds enchantment transfer, and replaces Mending with Unbreakable. |
+| [Super Awesome Enchanting](./SuperAwesomeEnchanting/README.md) | Playtest | Replaces random enchanting with deterministic catalyst upgrades, adds enchantment transfer, and replaces Mending with Unbreakable. |
 | [Super Awesome Villagers](./SuperAwesomeVillagers/README.md) | In design | Replaces random, limited Villager trades with fixed profession catalogs and a simpler resource economy. |
 
 ## Possible future packs

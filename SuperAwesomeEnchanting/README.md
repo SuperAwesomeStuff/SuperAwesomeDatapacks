@@ -2,7 +2,7 @@
 
 Super Awesome Enchanting replaces Minecraft's random Enchanting Table results with a deterministic, resource-based system. Players choose an enchantment, supply its catalyst, and know the result and cost before committing.
 
-**Status:** In design. There is no playable release yet.
+**Status:** Playtest-ready for Minecraft Java 26.3. Static validation, dedicated-server tests, and an initial client test pass. Balance and multiplayer behavior still need longer playtesting.
 
 **Target:** Minecraft Java Edition 26.3.
 
@@ -18,11 +18,15 @@ Super Awesome Enchanting replaces Minecraft's random Enchanting Table results wi
 
 Place a piece of equipment or a Book in the Enchanting Table with the catalyst associated with an enchantment. Each operation raises the applicable enchantment by one tier and consumes the catalyst quantity listed in the table below. The XP cost equals the resulting tier: tier I costs one level, tier II costs two levels, and so on.
 
+The target slot accepts exactly one item. Creative players do not pay the XP cost, but the operation still consumes the listed catalyst quantity. Catalyst enchanting never creates or raises an enchantment above its vanilla maximum tier.
+
 There is no level-30 requirement. Lapis and Bookshelves are not part of the new process. The Enchanting Table keeps its vanilla recipe, so Diamonds and Obsidian still determine when enchanting begins.
 
 Existing enchantments do not prevent further catalyst upgrades. Vanilla item restrictions and enchantment incompatibilities still apply. An invalid or conflicting operation returns every supplied item and consumes no XP.
 
 Books accept every catalyst. When one catalyst represents several enchantments, a Book gains or raises every associated enchantment that has not reached its maximum. The operation costs the highest resulting tier among the enchantments that changed. It fails only when none of the associated enchantments can advance.
+
+For equipment, the catalyst catalog must resolve to at most one applicable enchantment for each item. Catalog validation fails if an equipment and catalyst combination becomes ambiguous. Books are the deliberate multi-enchantment exception.
 
 Applying an enchanted Book to equipment follows vanilla compatibility rules. Compatible enchantments transfer, incompatible ones are discarded, and the Book is consumed. Books can still be combined with the usual Anvil rules.
 
@@ -37,7 +41,7 @@ The total column shows the material cost of starting without the enchantment and
 | Blast Protection | IV | 1 Obsidian | 4 Obsidian | Obsidian is Minecraft's recognizable explosion-resistant block. |
 | Breach | IV | 1 Amethyst Block | 4 Amethyst Blocks | Amethyst is a magical weapon material and groups related offensive enchantments on Books. |
 | Channeling | I | 1 Lightning Rod | 1 Lightning Rod | A direct association with attracting lightning. |
-| Curse of Binding | I | 1 Chain | 1 Chain | Represents an item being physically bound to its wearer. |
+| Curse of Binding | I | 1 Iron Chain | 1 Iron Chain | Represents an item being physically bound to its wearer. |
 | Curse of Vanishing | I | 1 Glass | 1 Glass | Glass is visually present but easy to overlook, fitting disappearance without making a curse expensive. |
 | Density | V | 1 Gold Block | 5 Gold Blocks | A heavy compacted metal block communicates additional mass. |
 | Depth Strider | III | 1 Nautilus Shell | 3 Nautilus Shells | An aquatic material associated with movement beneath the water. |
@@ -91,28 +95,32 @@ Repeating the catalyst raises every associated enchantment that has not reached 
 
 ## Enchanting Table interface
 
-The Enchanting Table will use a container-backed interface adapted from [FancyUI](https://github.com/FancyPotatOS/FancyUI). The needed framework code will live inside this pack so players do not need a second data pack. The placed workstation will still look like an Enchanting Table.
+The Enchanting Table uses [FancyUI](https://github.com/FancyPotatOS/FancyUI) as a separate datapack dependency. This private repository includes a patched 26.3-compatible copy in the top-level `FancyUI` directory. The placed workstation still looks like an Enchanting Table.
 
-The companion resource pack will improve the interface, but the underlying interaction and information must remain usable without it.
+No companion resource pack is planned. The interface uses named vanilla items, concise lore, a custom container title, disabled-state controls, and chat or action-bar feedback. Color and icon choice are never the only way to understand a control.
 
 The interface has two modes:
 
 - **Enchant:** Insert equipment or a Book and a catalyst. The interface previews the exact enchantments, resulting tiers, catalyst cost, and XP cost before confirmation.
 - **Transfer:** Insert a source item, a blank destination item or Book, and one Amethyst Block. The interface previews every enchantment that will move and warns that the source will be destroyed. A transfer costs five levels.
 
+Both modes revalidate their inputs when the owner presses Confirm. A successful operation mutates the target or destination slot in place rather than creating a separate output. Curse operations rename the control to Apply Curse and warn that Grindstones cannot remove the result.
+
 A reference view shows all catalyst recipes from the start. Its tabs are Armor, Melee, Ranged, Tools, Movement and water, and Curses. Inserting an item filters the list to compatible enchantments.
 
-Only one player can use a workstation at a time. Breaking or destroying it returns the Enchanting Table and every player-supplied item, then removes its supporting entities and interface items.
+The first player to insert an accepted target owns the workstation session and is the only player who can confirm its operation. Other players see that the workstation is busy. The session remains owned until every supplied or resulting item leaves the workstation.
+
+If another player changes its contents, the operation cancels against the owner's last verified snapshot. Verified inputs move to the owner's persistent escrow, unexpected live items drop at the workstation, previews clear, and the session ends. Disconnecting or dying also moves supplied items to escrow for return on the owner's next join or respawn. Breaking or destroying the workstation instead drops the Enchanting Table and every player-supplied item at its location, then removes its supporting entities and interface items. Adjacent Hoppers and Hopper Minecarts cannot insert or extract items.
 
 The interface design remains subject to multiplayer and performance testing on Java Edition 26.3.
 
 ## Enchantment transfer
 
-Direct transfers work between items in the same narrow equipment category, regardless of material. An Iron Pickaxe can transfer to a Diamond Pickaxe, but a Pickaxe cannot transfer directly to a Sword. Bows and Crossbows are separate categories. Tridents, Shields, Elytra, Maces, Fishing Rods, and other unusual equipment each have their own category.
+Direct transfers work between items in the same narrow equipment category, regardless of material. Helmet, chestplate, leggings, and boots are four separate categories. Sword, Axe, Pickaxe, Shovel, and Hoe are separate categories. Bows and Crossbows are separate. Spears, Maces, Tridents, Shields, Elytra, Fishing Rods, Shears, Brushes, Flint and Steel, Carrots on Sticks, and Warped Fungi on Sticks each have their own category.
 
-A Book is the deliberate exception. Any item can transfer its enchantments into a blank Book, which can then apply compatible enchantments to a different equipment category through an Anvil.
+A Book is the deliberate exception. Any item can transfer its enchantments into a blank Book, which can then apply compatible enchantments to a different equipment category through an Anvil. An enchanted Book cannot be a transfer source; applying it remains an Anvil operation.
 
-The destination must be unenchanted. It keeps its name, lore, durability, trim, and other custom data. Its enchantments come from the source. Every enchantment transfers together, including curses and Unbreakable. The system rejects the operation if the complete enchantment set is not valid on the destination rather than silently discarding part of it.
+The destination must be unenchanted, except that Netherite equipment may already have only its automatic Unbreakable enchantment. A custom glint without an enchantment does not make an item enchanted. The destination keeps its name, lore, durability, trim, and other custom data. Its enchantments come from the source, with automatic Unbreakable preserved on Netherite equipment. Every enchantment transfers together, including curses and Unbreakable. The system rejects the operation if the complete resulting enchantment set is not valid on the destination rather than silently discarding part of it. Valid command-created tiers above the vanilla maximum survive transfer, but Catalyst enchanting cannot create or raise them.
 
 ## Unbreakable
 
@@ -120,7 +128,9 @@ Unbreakable replaces Mending and prevents all durability loss.
 
 - All Netherite equipment gains Unbreakable automatically.
 - Any other damageable item can receive it with one Netherite Ingot.
-- Gaining Unbreakable removes Unbreaking.
+- An item is fully repaired once when it gains Unbreakable.
+- Unbreaking may remain alongside Unbreakable, though its effect is redundant.
+- Unbreakable is compatible with Infinity.
 - Unbreakable can move through the normal transfer system.
 - A Grindstone can remove it from non-Netherite equipment. Netherite equipment regains it automatically.
 - Unbreakable never appears in random loot, fishing, mob drops, bartering, or Villager trades.
@@ -129,7 +139,7 @@ The intended implementation redefines `minecraft:mending` internally. Existing M
 
 ## Anvils and Grindstones
 
-Vanilla Anvil operations and Book-combining rules remain. Every enchantment's data-driven `anvil_cost` is reduced to 1, and the pack periodically resets the `minecraft:repair_cost` component on items in player inventories. This prevents the prior-work penalty from accumulating without requiring a custom Anvil.
+Vanilla Anvil operations and Book-combining rules remain. Every enchantment's data-driven `anvil_cost` is reduced to 1, and the pack periodically resets the `minecraft:repair_cost` component on directly held player inventory, hotbar, armor, offhand, and cursor items. It does not recurse into Ender Chests, containers, Bundles, or Shulker Boxes; those items are normalized after they enter a direct player slot. This prevents the prior-work penalty from accumulating without requiring a custom Anvil.
 
 Minecraft's hardcoded "Too Expensive!" threshold still exists. If intrinsic enchantment costs can reach it during testing, the affected costs will be adjusted.
 
@@ -139,27 +149,72 @@ The Grindstone keeps its vanilla role. It removes non-curse enchantments, return
 
 Catalysts are the reliable enchanting route. Naturally generated enchanted Books are jackpots.
 
-- Books from structure loot, vaults, fishing, mob drops, Piglin bartering, and similar random sources generate at the selected enchantment's maximum tier.
+- Books from structure loot, vaults, fishing, Piglin bartering, and similar random sources keep their source's vanilla one-or-several enchantment selection behavior, but every selected enchantment generates at its maximum tier.
 - Librarian Books retain their normal tier ranges unless Super Awesome Villagers is also installed.
 - Player-created and catalyst-created Books retain their constructed tiers.
 - The frequency and number of naturally generated Books remain close to vanilla. A successful find becomes better rather than more common.
 
-Structure loot uses small themed enchantment pools. Minor structures should usually have three to five choices, while major structures may have up to eight. Stronghold Libraries may draw from the full non-curse pool.
+Natural Books use these themed pools:
 
-Signature rewards retain separate loot rolls so themed Books do not dilute them. Swift Sneak from Ancient Cities, Wind Burst from Ominous Vaults, and Soul Speed from Bastions or bartering generate at their maximum tiers. Dangerous magical structures may have a separate low-chance curse roll. A curse never replaces the ordinary Book reward.
+| Source | Themed pool |
+| --- | --- |
+| Abandoned Mineshaft | Efficiency, Fortune, Silk Touch, Unbreaking, Feather Falling |
+| Ancient City | Efficiency, Silk Touch, Protection, Projectile Protection, Feather Falling, Respiration, Unbreaking, Thorns |
+| Bastion and Piglin bartering | Soul Speed only, as a signature enchantment |
+| Desert Pyramid | Blast Protection, Fire Protection, Thorns, Unbreaking |
+| Jungle Temple | Bane of Arthropods, Infinity, Punch, Projectile Protection, Unbreaking |
+| Pillager Outpost | Multishot, Piercing, Quick Charge, Projectile Protection, Unbreaking |
+| Dungeon | Sharpness, Smite, Bane of Arthropods, Protection, Unbreaking |
+| Stronghold Corridor | Protection, Projectile Protection, Sharpness, Efficiency, Fortune, Unbreaking |
+| Stronghold Crossing | Protection, Projectile Protection, Sharpness, Efficiency, Fortune, Unbreaking, Feather Falling, Looting |
+| Stronghold Library | Every general non-curse enchantment except Unbreakable and the three signature enchantments |
+| Big Underwater Ruin | Aqua Affinity, Respiration, Depth Strider, Luck of the Sea, Lure |
+| Woodland Mansion | Protection, Projectile Protection, Thorns, Sharpness, Smite, Bane of Arthropods, Looting, Unbreaking |
+| Fishing treasure | Luck of the Sea, Lure, Unbreaking, Respiration, Frost Walker |
+| Normal Vault combat and tool Book | Sharpness, Bane of Arthropods, Efficiency, Fortune, Silk Touch, Feather Falling |
+| Normal Vault aquatic Book | Riptide, Loyalty, Channeling, Impaling, Aqua Affinity |
+| Ominous Vault combat Book | Knockback, Punch, Smite, Looting, Multishot |
+| Ominous Vault Mace Book | Breach, Density |
+
+Signature rewards retain separate loot rolls so themed Books do not dilute them. Swift Sneak from Ancient Cities, Wind Burst from Ominous Vaults, and Soul Speed from Bastions or bartering generate at their maximum tiers. Curse Books are not added to natural loot.
+
+The optional vanilla Trade Rebalance experiment is not supported because it directly adds Mending through loot and Villager offers that bypass this pack's normal acquisition controls.
 
 ## Sponge recipe
 
-Sponge becomes renewable enough that Aqua Affinity does not depend on finite Sponge rooms. The shapeless recipe uses:
+Sponge becomes renewable enough that Aqua Affinity does not depend on finite Sponge rooms. The shapeless recipe crafts one Sponge from:
 
 - 2 Prismarine Crystals
 - 2 Kelp
 
 Ocean Monuments remain the efficient source of bulk Sponge.
 
+## Installation and removal
+
+Newly player-placed Enchanting Tables become workstations automatically. Tables that existed before the pack was installed, or were placed by commands or world generation, must be broken and placed again. The pack does not scan unloaded chunks for legacy tables.
+
+Copy both of these directories into the world's `datapacks` directory before the world starts:
+
+- `SuperAwesomeEnchanting`
+- `FancyUI`
+
+The upstream checkout contains optional `FancyUIResourcePack` directories, but they are not part of the playtest build. This compatibility pack uses vanilla item models, so no resource pack is required. If FancyUI is missing or incompatible, Super Awesome Enchanting reports the dependency error and refuses to convert newly placed Enchanting Tables.
+
+When upgrading from the earlier build that embedded FancyUI as `sae_ui`, run `/function sae:uninstall` while that old build is still loaded. Stop the server, replace the pack, add the separate FancyUI dependency, then restart. Break and replace each restored Enchanting Table to create the new workstation. This prevents old `sae_ui` marker entities from surviving the upgrade.
+
+Before removing the pack, join as an administrator and run `/function sae:uninstall`. The function returns online owners' escrow directly, drops any offline-owner escrow at the administrator, force-loads registered workstation chunks long enough to restore ordinary Enchanting Tables, preserves chunks that were already force-loaded, and removes supporting entities. Remove the data pack files only after the function reports completion. Removing the files without running the function is not guaranteed to be safe.
+
+The generated pack is reproducible:
+
+```powershell
+python tools/generate_enchanting_pack.py
+python tools/validate_enchanting_pack.py
+```
+
+The optional `tools/test_enchanting_server.py` smoke suite uses the ignored disposable server under `.cache/minecraft/26.3-rc2/integration-server`. It requires the server EULA to have been accepted explicitly. The script installs both datapacks into its test world. It verifies pack loading, UI text and tooltip data, watched-slot acceptance, equipment enchanting, shared-catalyst Books, transfer into Netherite, Unbreakable maintenance, themed loot execution, and registry-based uninstall restoration.
+
 ## Open design work
 
-- Assign the exact themed enchantment pool for each structure.
 - Test the container-backed workstation for safety, responsiveness, and multiplayer behavior on Java Edition 26.3.
 - Confirm that lowering every enchantment's `anvil_cost` to 1 keeps all legal combinations below the hardcoded Anvil limit.
 - Playtest catalyst costs, transfer costs, and loot rewards.

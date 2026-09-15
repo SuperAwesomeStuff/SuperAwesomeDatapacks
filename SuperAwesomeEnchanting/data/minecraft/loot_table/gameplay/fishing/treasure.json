@@ -1,0 +1,170 @@
+{
+  "type": "minecraft:fishing",
+  "pools": [
+    {
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:name_tag"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:saddle"
+        },
+        {
+          "type": "minecraft:item",
+          "modifier": [
+            {
+              "type": "minecraft:set_damage",
+              "damage": {
+                "type": "minecraft:uniform",
+                "max": 0.25,
+                "min": 0.0
+              }
+            },
+            {
+              "type": "minecraft:enchant_with_levels",
+              "levels": 30,
+              "options": "#minecraft:on_random_loot"
+            }
+          ],
+          "name": "minecraft:bow"
+        },
+        {
+          "type": "minecraft:item",
+          "modifier": [
+            {
+              "type": "minecraft:set_damage",
+              "damage": {
+                "type": "minecraft:uniform",
+                "max": 0.25,
+                "min": 0.0
+              }
+            },
+            {
+              "type": "minecraft:enchant_with_levels",
+              "levels": 30,
+              "options": "#minecraft:on_random_loot"
+            }
+          ],
+          "name": "minecraft:fishing_rod"
+        },
+        {
+          "type": "minecraft:item",
+          "modifier": {
+            "type": "minecraft:sequence",
+            "functions": [
+              {
+                "type": "minecraft:enchant_with_levels",
+                "levels": 30,
+                "options": "#sae:loot/fishing"
+              },
+              {
+                "type": "minecraft:filtered",
+                "item_filter": {
+                  "predicates": {
+                    "minecraft:stored_enchantments": [
+                      {
+                        "enchantments": "minecraft:luck_of_the_sea"
+                      }
+                    ]
+                  }
+                },
+                "on_pass": {
+                  "type": "minecraft:set_enchantments",
+                  "enchantments": {
+                    "minecraft:luck_of_the_sea": 3
+                  },
+                  "add": true
+                }
+              },
+              {
+                "type": "minecraft:filtered",
+                "item_filter": {
+                  "predicates": {
+                    "minecraft:stored_enchantments": [
+                      {
+                        "enchantments": "minecraft:lure"
+                      }
+                    ]
+                  }
+                },
+                "on_pass": {
+                  "type": "minecraft:set_enchantments",
+                  "enchantments": {
+                    "minecraft:lure": 3
+                  },
+                  "add": true
+                }
+              },
+              {
+                "type": "minecraft:filtered",
+                "item_filter": {
+                  "predicates": {
+                    "minecraft:stored_enchantments": [
+                      {
+                        "enchantments": "minecraft:unbreaking"
+                      }
+                    ]
+                  }
+                },
+                "on_pass": {
+                  "type": "minecraft:set_enchantments",
+                  "enchantments": {
+                    "minecraft:unbreaking": 3
+                  },
+                  "add": true
+                }
+              },
+              {
+                "type": "minecraft:filtered",
+                "item_filter": {
+                  "predicates": {
+                    "minecraft:stored_enchantments": [
+                      {
+                        "enchantments": "minecraft:respiration"
+                      }
+                    ]
+                  }
+                },
+                "on_pass": {
+                  "type": "minecraft:set_enchantments",
+                  "enchantments": {
+                    "minecraft:respiration": 3
+                  },
+                  "add": true
+                }
+              },
+              {
+                "type": "minecraft:filtered",
+                "item_filter": {
+                  "predicates": {
+                    "minecraft:stored_enchantments": [
+                      {
+                        "enchantments": "minecraft:frost_walker"
+                      }
+                    ]
+                  }
+                },
+                "on_pass": {
+                  "type": "minecraft:set_enchantments",
+                  "enchantments": {
+                    "minecraft:frost_walker": 2
+                  },
+                  "add": true
+                }
+              }
+            ]
+          },
+          "name": "minecraft:book"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:nautilus_shell"
+        }
+      ],
+      "rolls": 1
+    }
+  ],
+  "random_sequence": "minecraft:gameplay/fishing/treasure"
+}

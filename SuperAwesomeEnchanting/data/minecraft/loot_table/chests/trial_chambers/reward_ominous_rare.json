@@ -1,0 +1,244 @@
+{
+  "type": "minecraft:chest",
+  "pools": [
+    {
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:emerald_block",
+          "weight": 5
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:iron_block",
+          "weight": 4
+        },
+        {
+          "type": "minecraft:item",
+          "modifier": {
+            "type": "minecraft:enchant_with_levels",
+            "levels": {
+              "type": "minecraft:uniform",
+              "max": 20,
+              "min": 5
+            },
+            "options": "#minecraft:on_random_loot"
+          },
+          "name": "minecraft:crossbow",
+          "weight": 4
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:golden_apple",
+          "weight": 3
+        },
+        {
+          "type": "minecraft:item",
+          "modifier": {
+            "type": "minecraft:enchant_with_levels",
+            "levels": {
+              "type": "minecraft:uniform",
+              "max": 20,
+              "min": 10
+            },
+            "options": "#minecraft:on_random_loot"
+          },
+          "name": "minecraft:diamond_axe",
+          "weight": 3
+        },
+        {
+          "type": "minecraft:item",
+          "modifier": {
+            "type": "minecraft:enchant_with_levels",
+            "levels": {
+              "type": "minecraft:uniform",
+              "max": 20,
+              "min": 10
+            },
+            "options": "#minecraft:on_random_loot"
+          },
+          "name": "minecraft:diamond_chestplate",
+          "weight": 3
+        },
+        {
+          "type": "minecraft:item",
+          "modifier": {
+            "type": "minecraft:sequence",
+            "functions": [
+              {
+                "type": "minecraft:enchant_randomly",
+                "options": "#sae:loot/ominous_combat"
+              },
+              {
+                "type": "minecraft:filtered",
+                "item_filter": {
+                  "predicates": {
+                    "minecraft:stored_enchantments": [
+                      {
+                        "enchantments": "minecraft:knockback"
+                      }
+                    ]
+                  }
+                },
+                "on_pass": {
+                  "type": "minecraft:set_enchantments",
+                  "enchantments": {
+                    "minecraft:knockback": 2
+                  },
+                  "add": true
+                }
+              },
+              {
+                "type": "minecraft:filtered",
+                "item_filter": {
+                  "predicates": {
+                    "minecraft:stored_enchantments": [
+                      {
+                        "enchantments": "minecraft:punch"
+                      }
+                    ]
+                  }
+                },
+                "on_pass": {
+                  "type": "minecraft:set_enchantments",
+                  "enchantments": {
+                    "minecraft:punch": 2
+                  },
+                  "add": true
+                }
+              },
+              {
+                "type": "minecraft:filtered",
+                "item_filter": {
+                  "predicates": {
+                    "minecraft:stored_enchantments": [
+                      {
+                        "enchantments": "minecraft:smite"
+                      }
+                    ]
+                  }
+                },
+                "on_pass": {
+                  "type": "minecraft:set_enchantments",
+                  "enchantments": {
+                    "minecraft:smite": 5
+                  },
+                  "add": true
+                }
+              },
+              {
+                "type": "minecraft:filtered",
+                "item_filter": {
+                  "predicates": {
+                    "minecraft:stored_enchantments": [
+                      {
+                        "enchantments": "minecraft:looting"
+                      }
+                    ]
+                  }
+                },
+                "on_pass": {
+                  "type": "minecraft:set_enchantments",
+                  "enchantments": {
+                    "minecraft:looting": 3
+                  },
+                  "add": true
+                }
+              },
+              {
+                "type": "minecraft:filtered",
+                "item_filter": {
+                  "predicates": {
+                    "minecraft:stored_enchantments": [
+                      {
+                        "enchantments": "minecraft:multishot"
+                      }
+                    ]
+                  }
+                },
+                "on_pass": {
+                  "type": "minecraft:set_enchantments",
+                  "enchantments": {
+                    "minecraft:multishot": 1
+                  },
+                  "add": true
+                }
+              }
+            ]
+          },
+          "name": "minecraft:book",
+          "weight": 2
+        },
+        {
+          "type": "minecraft:item",
+          "modifier": {
+            "type": "minecraft:sequence",
+            "functions": [
+              {
+                "type": "minecraft:enchant_randomly",
+                "options": "#sae:loot/ominous_mace"
+              },
+              {
+                "type": "minecraft:filtered",
+                "item_filter": {
+                  "predicates": {
+                    "minecraft:stored_enchantments": [
+                      {
+                        "enchantments": "minecraft:breach"
+                      }
+                    ]
+                  }
+                },
+                "on_pass": {
+                  "type": "minecraft:set_enchantments",
+                  "enchantments": {
+                    "minecraft:breach": 4
+                  },
+                  "add": true
+                }
+              },
+              {
+                "type": "minecraft:filtered",
+                "item_filter": {
+                  "predicates": {
+                    "minecraft:stored_enchantments": [
+                      {
+                        "enchantments": "minecraft:density"
+                      }
+                    ]
+                  }
+                },
+                "on_pass": {
+                  "type": "minecraft:set_enchantments",
+                  "enchantments": {
+                    "minecraft:density": 5
+                  },
+                  "add": true
+                }
+              }
+            ]
+          },
+          "name": "minecraft:book",
+          "weight": 2
+        },
+        {
+          "type": "minecraft:item",
+          "modifier": {
+            "type": "minecraft:set_enchantments",
+            "enchantments": {
+              "minecraft:wind_burst": 3
+            }
+          },
+          "name": "minecraft:book",
+          "weight": 2
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:diamond_block"
+        }
+      ],
+      "rolls": 1
+    }
+  ],
+  "random_sequence": "minecraft:chests/trial_chambers/reward_ominous_rare"
+}

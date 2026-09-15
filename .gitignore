@@ -1,3 +1,7 @@
 AGENTS.md
 CONTEXT.md
 docs/*
+.cache/
+__pycache__/
+*.pyc
+SuperAwesomeEnchanting/third_party/FancyUI/
