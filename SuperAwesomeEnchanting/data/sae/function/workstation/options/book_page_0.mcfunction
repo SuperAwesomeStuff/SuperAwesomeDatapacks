@@ -1,0 +1,19 @@
+scoreboard players set #option_index sae.tmp 0
+function sae:workstation/options/book/sponge
+function sae:workstation/options/book/spider_eye
+function sae:workstation/options/book/obsidian
+function sae:workstation/options/book/amethyst_block
+function sae:workstation/options/book/lightning_rod
+function sae:workstation/options/book/gold_block
+function sae:workstation/options/book/nautilus_shell
+function sae:workstation/options/book/redstone_block
+function sae:workstation/options/book/slime_block
+function sae:workstation/options/book/blaze_rod
+function sae:workstation/options/book/magma_cream
+function sae:workstation/options/book/diamond_block
+function sae:workstation/options/book/blue_ice
+function sae:workstation/options/book/prismarine_shard
+function sae:workstation/options/book/spectral_arrow
+function sae:workstation/options/book/piston
+function sae:workstation/options/book/ender_pearl
+function sae:workstation/options/book/pufferfish

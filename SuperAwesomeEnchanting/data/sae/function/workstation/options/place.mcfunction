@@ -1,0 +1,19 @@
+execute if score #option_index sae.tmp matches 0 run function sae:workstation/options/place/3
+execute if score #option_index sae.tmp matches 1 run function sae:workstation/options/place/4
+execute if score #option_index sae.tmp matches 2 run function sae:workstation/options/place/5
+execute if score #option_index sae.tmp matches 3 run function sae:workstation/options/place/6
+execute if score #option_index sae.tmp matches 4 run function sae:workstation/options/place/7
+execute if score #option_index sae.tmp matches 5 run function sae:workstation/options/place/8
+execute if score #option_index sae.tmp matches 6 run function sae:workstation/options/place/12
+execute if score #option_index sae.tmp matches 7 run function sae:workstation/options/place/13
+execute if score #option_index sae.tmp matches 8 run function sae:workstation/options/place/14
+execute if score #option_index sae.tmp matches 9 run function sae:workstation/options/place/15
+execute if score #option_index sae.tmp matches 10 run function sae:workstation/options/place/16
+execute if score #option_index sae.tmp matches 11 run function sae:workstation/options/place/17
+execute if score #option_index sae.tmp matches 12 run function sae:workstation/options/place/21
+execute if score #option_index sae.tmp matches 13 run function sae:workstation/options/place/22
+execute if score #option_index sae.tmp matches 14 run function sae:workstation/options/place/23
+execute if score #option_index sae.tmp matches 15 run function sae:workstation/options/place/24
+execute if score #option_index sae.tmp matches 16 run function sae:workstation/options/place/25
+execute if score #option_index sae.tmp matches 17 run function sae:workstation/options/place/26
+scoreboard players add #option_index sae.tmp 1

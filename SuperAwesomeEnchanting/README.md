@@ -97,18 +97,24 @@ Repeating the catalyst raises every associated enchantment that has not reached 
 
 The Enchanting Table uses [FancyUI](https://github.com/FancyPotatOS/FancyUI) as a separate datapack dependency. This private repository includes a patched 26.3-compatible copy in the top-level `FancyUI` directory. The placed workstation still looks like an Enchanting Table.
 
-No companion resource pack is planned. The interface uses named vanilla items, concise lore, a custom container title, disabled-state controls, and chat or action-bar feedback. Color and icon choice are never the only way to understand a control.
+No companion resource pack is planned. The interface uses named vanilla items, concise lore, a custom container title, disabled-state controls, and chat feedback. Color and icon choice are never the only way to understand a control.
 
-The interface has two modes:
+The interface has two modes. The selected mode remains active after an operation so players can perform several similar operations in sequence:
 
-- **Enchant:** Insert equipment or a Book and a catalyst. The interface previews the exact enchantments, resulting tiers, catalyst cost, and XP cost before confirmation.
-- **Transfer:** Insert a source item, a blank destination item or Book, and one Amethyst Block. The interface previews every enchantment that will move and warns that the source will be destroyed. A transfer costs five levels.
+- **Enchant:** Insert one piece of equipment or one Book. The right side displays every enchantment supported by that target. Clicking an ordinary Enchanting option applies it immediately, pulling its Catalyst from the session owner's main inventory or hotbar and charging the resulting tier's XP cost.
+- **Transfer:** Insert a source and a blank transfer item or Book. A dedicated left-to-right row shows **Source → Transfer item → Result**, previews every transferred enchantment and tier, warns that the source will be destroyed, and shows the five-level cost. Transfer does not require a Catalyst. Taking the Result completes the operation.
 
-Both modes revalidate their inputs when the owner presses Confirm. A successful operation mutates the target or destination slot in place rather than creating a separate output. Curse operations rename the control to Apply Curse and warn that Grindstones cannot remove the result.
+Enchant mode places the Target label in the second slot of the top row and its item directly below it. The third column remains an empty spacer before the solid three-by-six Catalyst grid on the right. The bottom-left button always switches modes, while Book pagination sits below the Target column. Every equipment item fits on one page. Books expose one option per distinct Catalyst, including shared Catalysts that raise several enchantments together, and use a single control to switch between two pages. There is no separate category navigation or full Catalyst catalogue.
 
-A reference view shows all catalyst recipes from the start. Its tabs are Armor, Melee, Ranged, Tools, Movement and water, and Curses. Inserting an item filters the list to compatible enchantments.
+Enchanting options use their Catalyst as the icon and the resulting enchantment or enchantments as the primary name. Equipment options are sorted alphabetically, with curses always placed after ordinary enchantments. Book options are grouped by Catalyst and use the same curses-last ordering. Each tooltip identifies every resulting tier, the Catalyst cost, and the XP cost. Supported options remain visible when unavailable and state the exact reason, including an incompatible enchantment, maximum tier, missing Catalyst, or insufficient XP. Affordability refreshes while a Workstation session is active, and every click revalidates the operation atomically.
 
-The first player to insert an accepted target owns the workstation session and is the only player who can confirm its operation. Other players see that the workstation is busy. The session remains owned until every supplied or resulting item leaves the workstation.
+A successful enchantment leaves the target in place, refreshes its options, and plays an Enchanting Table sound without sending a chat or action-bar message. A short click cooldown prevents an accidental double-click from buying two tiers. Curses instead arm on the first click and require a second click within three seconds; changing inputs, selecting another option, switching modes, or allowing the timer to expire disarms them.
+
+Transfer has a separate left-to-right Source, Transfer item, and Result layout. Each item sits below its label. As in Enchant mode, the bottom-left button switches modes without a separate label. When the inputs are compatible and the owner can pay five levels, the Result slot previews the completed item's model, custom name, glint, and full enchantment set. Book results use the enchanted-Book model and stored-enchantment tooltip. Taking the Result charges the levels and consumes both inputs. The result moves to the player's cursor; if the cursor becomes occupied during delivery, it drops at the workstation instead. Switching modes preserves the primary item, but the player must remove an inserted Transfer item before returning to Enchant mode. Changing the target or mode resets Book pagination to its first page; completing an enchantment does not.
+
+Before a valid target is inserted, the option area asks for equipment or a Book. Invalid targets receive a specific explanation. A target stack must contain exactly one item. In Enchant mode, the Transfer item slot is covered by a fixed interface element and cannot accept an item; it becomes an input only after switching to Transfer mode.
+
+In Enchant mode, the first player to insert an accepted target owns the workstation session. In Transfer mode, inserting either input first claims the session, so the source and transfer item may be supplied in either order. The owner is the only player who can change the mode or page, select an Enchanting option, or take a transfer Result. A non-owner's control click does not inspect or consume their inventory; it plays failure feedback and tells them who owns the session. The session remains owned until every supplied or resulting item leaves the workstation.
 
 If another player changes its contents, the operation cancels against the owner's last verified snapshot. Verified inputs move to the owner's persistent escrow, unexpected live items drop at the workstation, previews clear, and the session ends. Disconnecting or dying also moves supplied items to escrow for return on the owner's next join or respawn. Breaking or destroying the workstation instead drops the Enchanting Table and every player-supplied item at its location, then removes its supporting entities and interface items. Adjacent Hoppers and Hopper Minecarts cannot insert or extract items.
 
@@ -193,6 +199,8 @@ Ocean Monuments remain the efficient source of bulk Sponge.
 
 Newly player-placed Enchanting Tables become workstations automatically. Tables that existed before the pack was installed, or were placed by commands or world generation, must be broken and placed again. The pack does not scan unloaded chunks for legacy tables.
 
+To turn a workstation back into an ordinary decorative Enchanting Table, stand within six blocks of it and run `/trigger sae.vanilla`. The command converts the nearest workstation. Any supplied enchanting or transfer items drop safely at the table, and the workstation is removed from the pack's registry.
+
 Copy both of these directories into the world's `datapacks` directory before the world starts:
 
 - `SuperAwesomeEnchanting`
@@ -211,7 +219,7 @@ python tools/generate_enchanting_pack.py
 python tools/validate_enchanting_pack.py
 ```
 
-The optional `tools/test_enchanting_server.py` smoke suite uses the ignored disposable server under `.cache/minecraft/26.3-rc2/integration-server`. It requires the server EULA to have been accepted explicitly. The script installs both datapacks into its test world. It verifies pack loading, UI text and tooltip data, watched-slot acceptance, equipment enchanting, shared-catalyst Books, transfer into Netherite, Unbreakable maintenance, themed loot execution, and registry-based uninstall restoration.
+The optional `tools/test_enchanting_server.py` smoke suite uses the ignored disposable server under `.cache/minecraft/26.3-rc2/integration-server`. It requires the server EULA to have been accepted explicitly. The script installs both datapacks into its test world. It verifies pack loading, UI text and tooltip data, watched-slot acceptance, equipment enchanting, shared-catalyst Books, transfer into Netherite, Unbreakable maintenance, nearby workstation conversion, themed loot execution, and registry-based uninstall restoration.
 
 ## Open design work
 

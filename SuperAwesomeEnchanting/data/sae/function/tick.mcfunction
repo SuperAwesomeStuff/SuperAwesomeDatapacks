@@ -8,4 +8,8 @@ execute as @e[type=hopper_minecart,tag=sae.hopper_blocked] at @s unless entity @
 execute as @e[type=hopper_minecart,tag=sae.hopper_blocked] at @s unless entity @e[type=marker,tag=sae.workstation,distance=..2] run tag @s remove sae.hopper_blocked
 execute as @a[scores={sae.deaths=1..}] run function sae:escrow/on_death
 scoreboard players set @a[scores={sae.deaths=1..}] sae.deaths 0
+scoreboard players remove @a[scores={sae.cooldown=1..}] sae.cooldown 1
 execute as @a at @s run function sae:escrow/return
+scoreboard players enable @a sae.vanilla
+execute as @a[scores={sae.vanilla=1..}] at @s run function sae:workstation/restore_vanilla/start
+scoreboard players set @a[scores={sae.vanilla=1..}] sae.vanilla 0

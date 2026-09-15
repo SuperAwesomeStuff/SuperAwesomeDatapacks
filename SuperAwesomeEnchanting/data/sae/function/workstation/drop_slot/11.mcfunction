@@ -1,0 +1,8 @@
+
+execute unless data block ~ ~ ~ Items[{Slot:11b}] run return 0
+summon item ~ ~1 ~ {Item:{id:"minecraft:stone",count:1},Tags:["sae.workstation_return"]}
+data modify entity @n[type=item,tag=sae.workstation_return,distance=..3] Item set from block ~ ~ ~ Items[{Slot:11b}]
+tag @n[type=item,tag=sae.workstation_return,distance=..3] remove sae.workstation_return
+item replace block ~ ~ ~ container.11 with air
+scoreboard players set modified_slot fancyui.master 11
+function fancyui:manual_removal

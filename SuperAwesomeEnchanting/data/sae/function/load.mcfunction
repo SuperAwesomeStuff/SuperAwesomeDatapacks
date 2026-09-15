@@ -6,6 +6,9 @@ scoreboard objectives add sae.uuid1 dummy
 scoreboard objectives add sae.uuid2 dummy
 scoreboard objectives add sae.uuid3 dummy
 scoreboard objectives add sae.deaths deathCount
+scoreboard objectives add sae.cooldown dummy
+scoreboard objectives add sae.timer dummy
+scoreboard objectives add sae.vanilla trigger
 scoreboard players set #clock sae.clock 0
 scoreboard players set #dependency_notice sae.tmp 0
 execute unless data storage sae:registry next_id run data modify storage sae:registry next_id set value 0

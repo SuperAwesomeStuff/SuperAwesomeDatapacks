@@ -137,12 +137,96 @@ def main() -> int:
         errors.append("missing FancyUI can replace an Enchanting Table with a chest")
     if 'criteria:"*"' not in create:
         errors.append("workstation watch slots do not accept arbitrary inserted items")
+    if create.count('type:"watch"') != 2 or 'Slot:10b,type:"watch"' not in create or 'Slot:11b,type:"watch"' not in create:
+        errors.append("workstation does not expose exactly the target/source and destination input slots")
+    if create.count('type:"button"') != 24 or create.count('action:"empty"') != 21:
+        errors.append("workstation does not reserve eighteen contextual Enchanting option controls")
+    if any(action in create for action in ('tab_armor', 'tab_melee', 'tab_ranged', 'tab_tools', 'tab_movement', 'tab_curses')):
+        errors.append("workstation still contains category-first navigation")
     if "CustomName:{text:" not in create:
         errors.append("container title is not a structured text component")
     if '"minecraft:custom_name":\'' in generated_functions or '"minecraft:lore" set value [\'' in generated_functions:
         errors.append("generated UI text still stores JSON as literal strings")
     if "transformation:{translation:" not in create:
         errors.append("workstation display has no explicit centering transformation")
+    load_function = (DATA / "sae/function/load.mcfunction").read_text(encoding="utf-8")
+    tick_function = (DATA / "sae/function/tick.mcfunction").read_text(encoding="utf-8")
+    if "scoreboard objectives add sae.vanilla trigger" not in load_function:
+        errors.append("vanilla-workstation conversion does not register its trigger command")
+    if "scoreboard players enable @a sae.vanilla" not in tick_function:
+        errors.append("players cannot run /trigger sae.vanilla")
+    if "function sae:workstation/restore_vanilla/start" not in tick_function:
+        errors.append("the sae.vanilla trigger does not dispatch workstation conversion")
+    if (DATA / "sae/advancement/restore_vanilla_workstation.json").exists():
+        errors.append("the unreliable Redstone Torch interaction advancement still exists")
+    restore_start = (DATA / "sae/function/workstation/restore_vanilla/start.mcfunction").read_text(encoding="utf-8")
+    if "@n[type=marker,tag=sae.workstation,distance=..6]" not in restore_start:
+        errors.append("the sae.vanilla trigger does not select the nearest workstation within six blocks")
+    if "raycast" in restore_start or (DATA / "sae/function/workstation/restore_vanilla/raycast.mcfunction").exists():
+        errors.append("the sae.vanilla trigger still depends on unreliable look-direction raycasting")
+    restore_apply = (DATA / "sae/function/workstation/restore_vanilla/apply.mcfunction").read_text(encoding="utf-8")
+    if "function sae:workstation/unregister" not in restore_apply or "function sae:workstation/uninstall_one" not in restore_apply:
+        errors.append("vanilla-workstation opt-out does not unregister and safely restore the table")
+    transfer_preview = (DATA / "sae/function/transfer/preview.mcfunction").read_text(encoding="utf-8")
+    transfer_apply = (DATA / "sae/function/transfer/apply.mcfunction").read_text(encoding="utf-8")
+    if "amethyst_block" in transfer_preview + transfer_apply or "consume_transfer_catalyst" in generated_functions:
+        errors.append("enchantment transfer still charges an Amethyst Catalyst")
+    if "sae.cooldown 6" not in generated_functions or "sae.timer 60" not in generated_functions:
+        errors.append("one-click purchases do not implement the agreed cooldown and arming window")
+    option_place = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (DATA / "sae/function/workstation/options/place").glob("*.mcfunction")
+    )
+    expected_option_slots = {str(slot) for slot in (*range(3, 9), *range(12, 18), *range(21, 27))}
+    actual_option_slots = {path.stem for path in (DATA / "sae/function/workstation/options/place").glob("*.mcfunction")}
+    if actual_option_slots != expected_option_slots:
+        errors.append("Enchanting options do not form the expected three-by-six Catalyst grid")
+    equipment_order = re.findall(
+        r"function sae:workstation/options/equipment/([a-z_]+)",
+        (DATA / "sae/function/workstation/options/equipment.mcfunction").read_text(encoding="utf-8"),
+    )
+    if equipment_order[-2:] != ["binding_curse", "vanishing_curse"]:
+        errors.append("equipment Enchanting options do not place curses last")
+    book_order: list[str] = []
+    for page in (0, 1):
+        book_order.extend(re.findall(
+            r"function sae:workstation/options/book/([a-z_]+)",
+            (DATA / f"sae/function/workstation/options/book_page_{page}.mcfunction").read_text(encoding="utf-8"),
+        ))
+    if book_order[-2:] != ["iron_chain", "glass"]:
+        errors.append("Book Enchanting options do not place curses last")
+    if "].id set" in option_place or '"minecraft:item_model"' not in option_place:
+        errors.append("rendered controls replace FancyUI's physical button item instead of its vanilla item model")
+    enchant_controls = (DATA / "sae/function/workstation/options/render_enchant_controls.mcfunction").read_text(encoding="utf-8")
+    if "function sae:workstation/destination_guard/show" not in enchant_controls:
+        errors.append("Enchant mode leaves the Transfer destination watch exposed")
+    input_changed = (DATA / "sae/function/workstation/input_changed.mcfunction").read_text(encoding="utf-8")
+    if "return_inactive_destination" in input_changed or 'callback_data{slot:11}' not in input_changed or input_changed.count("function sae:workstation/session/claim") < 2:
+        errors.append("Transfer item inserted before Source is dropped instead of claiming a session and remaining in its slot")
+    transfer_render = (DATA / "sae/function/transfer/render.mcfunction").read_text(encoding="utf-8")
+    if "].id set" in enchant_controls or "].id set" in transfer_render:
+        errors.append("mode-specific controls replace FancyUI's fixed physical items")
+    if not all(label in transfer_render for label in ('Slot:1b', 'Slot:2b', 'Slot:4b', 'Slot:10b', 'Slot:11b', 'Slot:12b', 'Slot:13b', 'Slot:18b', 'text:"Source"', 'text:"Transfer item"', 'text:"Result"', 'action:"mode_toggle"')):
+        errors.append("Transfer mode does not render the dedicated left-to-right output workflow")
+    transfer_preview = (DATA / "sae/function/transfer/render_preview.mcfunction").read_text(encoding="utf-8")
+    if 'action:"transfer_take"' not in transfer_preview or (DATA / "sae/function/workstation/transfer_confirm.mcfunction").exists():
+        errors.append("Transfer still uses a confirmation control instead of taking the Result")
+    if not all(component in transfer_preview for component in ('"minecraft:item_model"', '"minecraft:enchantments"', '"minecraft:enchantment_glint_override"', "function sae:transfer/render_preview_book")):
+        errors.append("Transfer Result does not visually preview the completed enchanted item")
+    if "function sae:transfer/preview_line/" in transfer_preview or (DATA / "sae/function/transfer/preview_line").exists():
+        errors.append("Transfer Result duplicates native enchantment subtitles in custom lore")
+    transfer_book_preview = (DATA / "sae/function/transfer/render_preview_book.mcfunction").read_text(encoding="utf-8")
+    if '"minecraft:stored_enchantments"' not in transfer_book_preview:
+        errors.append("Book transfers do not preview their stored enchantments")
+    delivery = (DATA / "sae/function/transfer/deliver_one.mcfunction").read_text(encoding="utf-8")
+    if "player.cursor" not in delivery or "function sae:transfer/deliver_drop" not in delivery:
+        errors.append("Transfer Result delivery does not protect an occupied player cursor")
+    transfer_apply = (DATA / "sae/function/transfer/apply.mcfunction").read_text(encoding="utf-8")
+    apply_selection = (DATA / "sae/function/workstation/apply_selection.mcfunction").read_text(encoding="utf-8")
+    if "function fancyui:manual_removal" not in transfer_apply or "function fancyui:manual_placement" not in transfer_apply:
+        errors.append("transfer mutation does not synchronize FancyUI's watched source and result slots")
+    if "function fancyui:manual_placement" not in apply_selection:
+        errors.append("enchanting mutation does not synchronize FancyUI's watched target slot")
 
     if not (FANCYUI / "pack.mcmeta").exists():
         errors.append("private FancyUI dependency is missing")

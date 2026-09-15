@@ -1,7 +1,16 @@
 
-execute if items block ~ ~ ~ container.14 minecraft:book run function sae:transfer/apply_book
-execute unless items block ~ ~ ~ container.14 minecraft:book run function sae:transfer/apply_equipment
+execute if items block ~ ~ ~ container.11 minecraft:book run function sae:transfer/apply_book
+execute unless items block ~ ~ ~ container.11 minecraft:book run function sae:transfer/apply_equipment
+scoreboard players set modified_slot fancyui.master 11
+function fancyui:manual_placement
 item replace block ~ ~ ~ container.10 with air
-function sae:workstation/consume_transfer_catalyst
+scoreboard players set modified_slot fancyui.master 10
+function fancyui:manual_removal
 function sae:workstation/charge_levels
-tellraw @a[tag=fancyui.button.clicker] {"text":"All enchantments transferred; the source item was consumed.","color":"green"}
+scoreboard players set @a[tag=fancyui.button.clicker] sae.cooldown 6
+data remove entity @s data.sae.armed
+scoreboard players set @s sae.timer 0
+playsound minecraft:block.enchantment_table.use master @a[tag=fancyui.button.clicker] ~ ~ ~ 1 1
+data modify entity @s data.sae.pending_delivery set value true
+function sae:workstation/session/snapshot
+schedule function sae:transfer/deliver 1t append

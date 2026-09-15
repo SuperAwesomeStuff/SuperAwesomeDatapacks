@@ -264,7 +264,7 @@ def install_metadata() -> None:
 def button(slot: int, item: str, name: str, action: str, lore: str = "") -> str:
     lore_part = f',"minecraft:lore":[{{text:"{lore}",color:"gray",italic:false}}]' if lore else ""
     return (
-        f'{{Slot:{slot}b,type:"button",id:"minecraft:{item}",components:{{'
+        f'{{Slot:{slot}b,type:"button",components:{{"minecraft:item_model":"minecraft:{item}",'
         f'"minecraft:custom_name":{{text:"{name}",color:"white",italic:false}}'
         f'{lore_part},"minecraft:custom_data":{{sae:{{action:"{action}"}}}}}},'
         f'callback:{{function:"sae:workstation/button"}}}}'
@@ -284,6 +284,11 @@ def background(slot: int) -> str:
 
 def install_runtime(maximums: dict[str, int]) -> None:
     fn = DATA / "sae/function"
+    target_slot = 10
+    destination_slot = 11
+    transfer_preview_slot = 13
+    transfer_mode_slot = 18
+    option_slots = [*range(3, 9), *range(12, 18), *range(21, 27)]
 
     write_text(fn / "load.mcfunction", """
 scoreboard objectives add sae.tmp dummy
@@ -293,6 +298,9 @@ scoreboard objectives add sae.uuid1 dummy
 scoreboard objectives add sae.uuid2 dummy
 scoreboard objectives add sae.uuid3 dummy
 scoreboard objectives add sae.deaths deathCount
+scoreboard objectives add sae.cooldown dummy
+scoreboard objectives add sae.timer dummy
+scoreboard objectives add sae.vanilla trigger
 scoreboard players set #clock sae.clock 0
 scoreboard players set #dependency_notice sae.tmp 0
 execute unless data storage sae:registry next_id run data modify storage sae:registry next_id set value 0
@@ -309,7 +317,11 @@ execute as @e[type=hopper_minecart,tag=sae.hopper_blocked] at @s unless entity @
 execute as @e[type=hopper_minecart,tag=sae.hopper_blocked] at @s unless entity @e[type=marker,tag=sae.workstation,distance=..2] run tag @s remove sae.hopper_blocked
 execute as @a[scores={sae.deaths=1..}] run function sae:escrow/on_death
 scoreboard players set @a[scores={sae.deaths=1..}] sae.deaths 0
+scoreboard players remove @a[scores={sae.cooldown=1..}] sae.cooldown 1
 execute as @a at @s run function sae:escrow/return
+scoreboard players enable @a sae.vanilla
+execute as @a[scores={sae.vanilla=1..}] at @s run function sae:workstation/restore_vanilla/start
+scoreboard players set @a[scores={sae.vanilla=1..}] sae.vanilla 0
 """)
     write_text(fn / "dependency/check.mcfunction", """
 scoreboard players set #dependency_notice sae.tmp 1
@@ -328,30 +340,37 @@ execute if score #found sae.tmp matches 1 run return 1
 scoreboard players add #ray sae.tmp 1
 execute if score #ray sae.tmp matches ..24 positioned ^ ^ ^0.25 run function sae:workstation/place/raycast
 """)
+    write_text(fn / "workstation/restore_vanilla/start.mcfunction", """
+scoreboard players set #found sae.tmp 0
+execute as @n[type=marker,tag=sae.workstation,distance=..6] at @s run function sae:workstation/restore_vanilla/apply
+execute if score #found sae.tmp matches 0 run tellraw @s [{"text":"No workstation found. ","color":"red"},{"text":"Stand within six blocks of a Super Awesome Enchanting table and try again.","color":"gray"}]
+""")
+    write_text(fn / "workstation/restore_vanilla/apply.mcfunction", """
+scoreboard players set #found sae.tmp 1
+playsound minecraft:block.fire.extinguish block @a[distance=..8] ~ ~ ~ 0.7 1.2
+function sae:workstation/unregister
+function sae:workstation/uninstall_one
+""")
 
-    slots: list[str] = []
-    slots.extend([
-        button(0, "iron_chestplate", "Armor recipes", "tab_armor"),
-        button(1, "iron_sword", "Melee recipes", "tab_melee"),
-        button(2, "bow", "Ranged recipes", "tab_ranged"),
-        button(3, "iron_pickaxe", "Tool recipes", "tab_tools"),
-        button(4, "nautilus_shell", "Movement and water", "tab_movement"),
-        button(5, "iron_chain", "Curse recipes", "tab_curses"),
-        button(6, "arrow", "Previous page", "previous"),
-        button(7, "enchanting_table", "Enchant mode", "mode_enchant"),
-        button(8, "amethyst_block", "Transfer mode", "mode_transfer"),
-        background(9), watch(10), background(11), watch(12), background(13), watch(14), background(15),
-        button(16, "barrier", "Cannot confirm", "confirm", "Insert valid items"),
-        button(17, "arrow", "Next page", "next"),
-    ])
-    slots.extend(button(i, "book", "Recipe", "reference") for i in range(18, 27))
+    slots: list[str] = [
+        background(0),
+        button(1, "enchanting_table", "Target", "label"),
+        button(2, "gray_stained_glass_pane", " ", "empty"),
+        button(9, "gray_stained_glass_pane", " ", "empty"),
+        watch(target_slot),
+        watch(destination_slot),
+        button(18, "amethyst_shard", "Switch to Transfer", "mode_toggle"),
+        button(19, "arrow", "Page", "page_toggle"),
+        button(20, "gray_stained_glass_pane", " ", "empty"),
+    ]
+    slots.extend(button(slot, "gray_stained_glass_pane", " ", "empty") for slot in option_slots)
     slot_snbt = ",".join(slots)
     create = f"""
 scoreboard players set #found sae.tmp 1
 execute unless score version fancyui.master matches 1.. run return run tellraw @s {{"text":"Super Awesome Enchanting requires the included FancyUI compatibility datapack.","color":"red"}}
 setblock ~ ~ ~ minecraft:chest
 execute unless entity @e[type=marker,tag=sae.workstation,distance=..1] run summon marker ~ ~0.5 ~ {{Tags:["sae.workstation","fancyui","fancyui.container"]}}
-execute as @n[type=marker,tag=sae.workstation,distance=..1] run data modify entity @s data set value {{container:"minecraft:chest",container_data:{{CustomName:{{text:"Super Awesome Enchanting"}}}},on_break:"sae:workstation/on_break",slots:[{slot_snbt}],sae:{{mode:"enchant",category:"Armor",page:0}}}}
+execute as @n[type=marker,tag=sae.workstation,distance=..1] run data modify entity @s data set value {{container:"minecraft:chest",container_data:{{CustomName:{{text:"Super Awesome Enchanting"}}}},on_break:"sae:workstation/on_break",slots:[{slot_snbt}],sae:{{mode:"enchant",page:0}}}}
 execute as @n[type=marker,tag=sae.workstation,distance=..1] run function sae:workstation/register
 execute as @n[type=marker,tag=sae.workstation,distance=..1] at @s run function fancyui:initialize_all
 summon block_display ~ ~ ~ {{Tags:["sae.workstation.display"],block_state:{{id:"minecraft:enchanting_table"}},transformation:{{translation:[-0.001f,0f,-0.001f],left_rotation:[0f,0f,0f,1f],scale:[1.002f,1.18f,1.002f],right_rotation:[0f,0f,0f,1f]}}}}
@@ -369,6 +388,10 @@ execute if block ~ ~ ~-1 minecraft:hopper run data modify block ~ ~ ~-1 Transfer
 tag @e[type=hopper_minecart,distance=..2] add sae.hopper_blocked
 execute as @e[type=hopper_minecart,distance=..2] run data modify entity @s Enabled set value false
 execute if entity @s[tag=sae.session] run function sae:workstation/session/check_owner
+execute if score @s sae.timer matches 1.. run scoreboard players remove @s sae.timer 1
+execute if score @s sae.timer matches 0 run data remove entity @s data.sae.armed
+execute if entity @s[tag=sae.session] if score #clock sae.clock matches 0 run function sae:workstation/render
+execute if entity @s[tag=sae.session] if score #clock sae.clock matches 10 run function sae:workstation/render
 """)
 
     write_text(fn / "workstation/session/check_owner.mcfunction", """
@@ -385,11 +408,16 @@ execute as @a if score @s sae.uuid0 = #owner0 sae.tmp if score @s sae.uuid1 = #o
 execute if score #online sae.tmp matches 0 run function sae:escrow/store
 """)
 
-    write_text(fn / "workstation/input_changed.mcfunction", """
+    write_text(fn / "workstation/input_changed.mcfunction", f"""
 scoreboard players set successful_call fancyui.master 0
-execute unless entity @s[tag=sae.session] if data storage fancyui:data callback_data{slot:10} if data block ~ ~ ~ Items[{Slot:10b}] run function sae:workstation/session/claim
+data remove entity @s data.sae.armed
+scoreboard players set @s sae.timer 0
+execute unless entity @s[tag=sae.session] if data storage fancyui:data callback_data{{slot:{target_slot}}} if data block ~ ~ ~ Items[{{Slot:{target_slot}b}}] run function sae:workstation/session/claim
+execute unless entity @s[tag=sae.session] if data entity @s {{data:{{sae:{{mode:"transfer"}}}}}} if data storage fancyui:data callback_data{{slot:{destination_slot}}} if data block ~ ~ ~ Items[{{Slot:{destination_slot}b}}] run function sae:workstation/session/claim
 execute if entity @s[tag=sae.session] run function sae:workstation/session/verify_actor
-execute unless data block ~ ~ ~ Items[{Slot:10b}] unless data block ~ ~ ~ Items[{Slot:12b}] unless data block ~ ~ ~ Items[{Slot:14b}] run function sae:workstation/session/release
+execute if data entity @s {{data:{{sae:{{mode:"enchant"}}}}}} unless data block ~ ~ ~ Items[{{Slot:{target_slot}b}}] run function sae:workstation/session/release
+execute if data entity @s {{data:{{sae:{{mode:"transfer"}}}}}} unless data block ~ ~ ~ Items[{{Slot:{target_slot}b}}] unless data block ~ ~ ~ Items[{{Slot:{destination_slot}b}}] run function sae:workstation/session/release
+data modify entity @s data.sae.page set value 0
 function sae:workstation/render
 """)
     write_text(fn / "workstation/session/claim.mcfunction", """
@@ -410,66 +438,115 @@ execute if score #actor0 sae.tmp = @s sae.uuid0 if score #actor1 sae.tmp = @s sa
 execute if score #actor_ok sae.tmp matches 1 run function sae:workstation/session/snapshot
 execute if score #actor_ok sae.tmp matches 0 run function sae:workstation/session/conflict
 """)
-    write_text(fn / "workstation/session/snapshot.mcfunction", """
+    write_text(fn / "workstation/session/snapshot.mcfunction", f"""
 data remove entity @s data.sae.snapshot
-execute if data block ~ ~ ~ Items[{Slot:10b}] run data modify entity @s data.sae.snapshot.target set from block ~ ~ ~ Items[{Slot:10b}]
-execute if data block ~ ~ ~ Items[{Slot:12b}] run data modify entity @s data.sae.snapshot.catalyst set from block ~ ~ ~ Items[{Slot:12b}]
-execute if data block ~ ~ ~ Items[{Slot:14b}] run data modify entity @s data.sae.snapshot.destination set from block ~ ~ ~ Items[{Slot:14b}]
+execute if data block ~ ~ ~ Items[{{Slot:{target_slot}b}}] run data modify entity @s data.sae.snapshot.target set from block ~ ~ ~ Items[{{Slot:{target_slot}b}}]
+execute if data entity @s {{data:{{sae:{{mode:"transfer"}}}}}} if data block ~ ~ ~ Items[{{Slot:{destination_slot}b}}] run data modify entity @s data.sae.snapshot.destination set from block ~ ~ ~ Items[{{Slot:{destination_slot}b}}]
 """)
     write_text(fn / "workstation/session/release.mcfunction", """
 tag @s remove sae.session
 data remove entity @s data.sae.owner
 data remove entity @s data.sae.snapshot
+data remove entity @s data.sae.armed
+scoreboard players set @s sae.timer 0
 """)
-    write_text(fn / "workstation/session/conflict.mcfunction", """
-execute if data storage fancyui:data callback_data{slot:10} run function sae:workstation/drop_slot/10
-execute if data storage fancyui:data callback_data{slot:12} run function sae:workstation/drop_slot/12
-execute if data storage fancyui:data callback_data{slot:14} run function sae:workstation/drop_slot/14
+    write_text(fn / "workstation/session/conflict.mcfunction", f"""
+execute if data storage fancyui:data callback_data{{slot:{target_slot}}} run function sae:workstation/drop_slot/{target_slot}
+execute if data storage fancyui:data callback_data{{slot:{destination_slot}}} run function sae:workstation/drop_slot/{destination_slot}
 function sae:escrow/store
-tellraw @a[distance=..8] [{"text":"[Enchanting] ","color":"dark_aqua"},{"text":"The operation was cancelled because another player changed the Workstation.","color":"red"}]
+tellraw @a[distance=..8] [{{"text":"[Enchanting] ","color":"dark_aqua"}},{{"text":"The operation was cancelled because another player changed the Workstation.","color":"red"}}]
 """)
 
-    for slot in (10, 12, 14):
+    for slot in (target_slot, destination_slot):
         write_text(fn / f"workstation/drop_slot/{slot}.mcfunction", f"""
 execute unless data block ~ ~ ~ Items[{{Slot:{slot}b}}] run return 0
-summon item ~ ~1 ~ {{Tags:["sae.workstation_return"]}}
+summon item ~ ~1 ~ {{Item:{{id:"minecraft:stone",count:1}},Tags:["sae.workstation_return"]}}
 data modify entity @n[type=item,tag=sae.workstation_return,distance=..3] Item set from block ~ ~ ~ Items[{{Slot:{slot}b}}]
 tag @n[type=item,tag=sae.workstation_return,distance=..3] remove sae.workstation_return
 item replace block ~ ~ ~ container.{slot} with air
+scoreboard players set modified_slot fancyui.master {slot}
+function fancyui:manual_removal
 """)
 
     write_text(fn / "workstation/button.mcfunction", """
 scoreboard players set successful_call fancyui.master 0
-execute if data storage fancyui:data button.components."minecraft:custom_data".sae{action:"mode_enchant"} run data modify entity @s data.sae.mode set value "enchant"
-execute if data storage fancyui:data button.components."minecraft:custom_data".sae{action:"mode_transfer"} run data modify entity @s data.sae.mode set value "transfer"
-execute if data storage fancyui:data button.components."minecraft:custom_data".sae{action:"tab_armor"} run data merge entity @s {data:{sae:{category:"Armor",page:0}}}
-execute if data storage fancyui:data button.components."minecraft:custom_data".sae{action:"tab_melee"} run data merge entity @s {data:{sae:{category:"Melee",page:0}}}
-execute if data storage fancyui:data button.components."minecraft:custom_data".sae{action:"tab_ranged"} run data merge entity @s {data:{sae:{category:"Ranged",page:0}}}
-execute if data storage fancyui:data button.components."minecraft:custom_data".sae{action:"tab_tools"} run data merge entity @s {data:{sae:{category:"Tools",page:0}}}
-execute if data storage fancyui:data button.components."minecraft:custom_data".sae{action:"tab_movement"} run data merge entity @s {data:{sae:{category:"Movement and water",page:0}}}
-execute if data storage fancyui:data button.components."minecraft:custom_data".sae{action:"tab_curses"} run data merge entity @s {data:{sae:{category:"Curses",page:0}}}
-execute if data storage fancyui:data button.components."minecraft:custom_data".sae{action:"previous"} run function sae:workstation/reference/previous
-execute if data storage fancyui:data button.components."minecraft:custom_data".sae{action:"next"} run function sae:workstation/reference/next
-execute if data storage fancyui:data button.components."minecraft:custom_data".sae{action:"confirm"} run function sae:workstation/confirm
+execute if data storage fancyui:data button.components."minecraft:custom_data".sae{action:"mode_toggle"} run function sae:workstation/mode_toggle
+execute if data storage fancyui:data button.components."minecraft:custom_data".sae{action:"page_toggle"} run function sae:workstation/page_toggle
+execute if data storage fancyui:data button.components."minecraft:custom_data".sae{action:"enchant_option"} run function sae:workstation/select_option
+execute if data storage fancyui:data button.components."minecraft:custom_data".sae{action:"transfer_take"} run function sae:workstation/transfer_take
 function sae:workstation/render
 """)
-    write_text(fn / "workstation/reference/previous.mcfunction", """
-execute store result score #page sae.tmp run data get entity @s data.sae.page
-scoreboard players remove #page sae.tmp 1
-execute if score #page sae.tmp matches ..-1 run scoreboard players set #page sae.tmp 0
-execute store result entity @s data.sae.page int 1 run scoreboard players get #page sae.tmp
+    write_text(fn / "workstation/control/check_owner.mcfunction", """
+scoreboard players set #actor_ok sae.tmp 1
+execute if entity @s[tag=sae.session] run function sae:workstation/session/check_clicker
+execute unless score #actor_ok sae.tmp matches 1 run playsound minecraft:block.note_block.bass master @a[tag=fancyui.button.clicker] ~ ~ ~ 0.6 0.7
+execute unless score #actor_ok sae.tmp matches 1 run function sae:workstation/control/reject_non_owner
 """)
-    write_text(fn / "workstation/reference/next.mcfunction", """
-execute store result score #page sae.tmp run data get entity @s data.sae.page
-scoreboard players add #page sae.tmp 1
-execute unless data entity @s {data:{sae:{category:"Melee"}}} unless data entity @s {data:{sae:{category:"Ranged"}}} run scoreboard players set #page sae.tmp 0
-execute if score #page sae.tmp matches 2.. run scoreboard players set #page sae.tmp 0
-execute store result entity @s data.sae.page int 1 run scoreboard players get #page sae.tmp
+    write_text(fn / "workstation/control/reject_non_owner.mcfunction", """
+function sae:workstation/session/tag_owner
+tellraw @a[tag=fancyui.button.clicker] [{"text":"This Workstation belongs to ","color":"red"},{"selector":"@a[tag=sae.owner]","color":"yellow"},{"text":".","color":"red"}]
+tag @a remove sae.owner
+""")
+    write_text(fn / "workstation/mode_toggle.mcfunction", f"""
+function sae:workstation/control/check_owner
+execute unless score #actor_ok sae.tmp matches 1 run return 0
+execute if data entity @s {{data:{{sae:{{mode:"transfer"}}}}}} if data block ~ ~ ~ Items[{{Slot:{destination_slot}b}}] run return run playsound minecraft:block.note_block.bass master @a[tag=fancyui.button.clicker] ~ ~ ~ 0.6 0.7
+execute if data entity @s {{data:{{sae:{{mode:"transfer"}}}}}} run return run function sae:workstation/set_mode_enchant
+function sae:workstation/destination_guard/hide
+data modify entity @s data.sae.mode set value "transfer"
+data modify entity @s data.sae.page set value 0
+data remove entity @s data.sae.armed
+scoreboard players set @s sae.timer 0
+""")
+    write_text(fn / "workstation/destination_guard/show.mcfunction", f"""
+execute if items block ~ ~ ~ container.{destination_slot} *[minecraft:custom_data~{{sae:{{destination_guard:true}}}}] run return 0
+execute if data block ~ ~ ~ Items[{{Slot:{destination_slot}b}}] run return 0
+item replace block ~ ~ ~ container.{destination_slot} from block ~ ~ ~ container.0
+data modify block ~ ~ ~ Items[{{Slot:{destination_slot}b}}].components."minecraft:custom_data".fancyui.Slot set value {destination_slot}b
+data modify block ~ ~ ~ Items[{{Slot:{destination_slot}b}}].components."minecraft:custom_data".sae set value {{destination_guard:true}}
+scoreboard players set modified_slot fancyui.master {destination_slot}
+function fancyui:manual_placement
+""")
+    write_text(fn / "workstation/destination_guard/hide.mcfunction", f"""
+execute unless items block ~ ~ ~ container.{destination_slot} *[minecraft:custom_data~{{sae:{{destination_guard:true}}}}] run return 0
+item replace block ~ ~ ~ container.{destination_slot} with air
+scoreboard players set modified_slot fancyui.master {destination_slot}
+function fancyui:manual_removal
+""")
+    write_text(fn / "workstation/set_mode_enchant.mcfunction", """
+data modify entity @s data.sae.mode set value "enchant"
+data modify entity @s data.sae.page set value 0
+data remove entity @s data.sae.armed
+scoreboard players set @s sae.timer 0
+""")
+    write_text(fn / "workstation/page_toggle.mcfunction", """
+function sae:workstation/control/check_owner
+execute unless score #actor_ok sae.tmp matches 1 run return 0
+execute unless data entity @s data.sae.book_target run return 0
+execute if data entity @s {data:{sae:{page:1}}} run return run function sae:workstation/set_page_zero
+data modify entity @s data.sae.page set value 1
+data remove entity @s data.sae.armed
+scoreboard players set @s sae.timer 0
+""")
+    write_text(fn / "workstation/set_page_zero.mcfunction", """
+data modify entity @s data.sae.page set value 0
+data remove entity @s data.sae.armed
+scoreboard players set @s sae.timer 0
 """)
 
     write_text(fn / "workstation/render.mcfunction", """
-function sae:workstation/preview
-function sae:workstation/reference/render
+function sae:workstation/session/tag_owner
+function sae:workstation/options/render
+tag @a remove sae.owner
+""")
+    write_text(fn / "workstation/session/tag_owner.mcfunction", """
+tag @a remove sae.owner
+execute unless entity @s[tag=sae.session] run return 0
+scoreboard players operation #owner0 sae.tmp = @s sae.uuid0
+scoreboard players operation #owner1 sae.tmp = @s sae.uuid1
+scoreboard players operation #owner2 sae.tmp = @s sae.uuid2
+scoreboard players operation #owner3 sae.tmp = @s sae.uuid3
+execute as @a if score @s sae.uuid0 = #owner0 sae.tmp if score @s sae.uuid1 = #owner1 sae.tmp if score @s sae.uuid2 = #owner2 sae.tmp if score @s sae.uuid3 = #owner3 sae.tmp run tag @s add sae.owner
 """)
 
     write_text(fn / "workstation/on_break.mcfunction", """
@@ -490,10 +567,9 @@ function sae:uninstall/drain_escrow
 kill @e[type=item,predicate=fancyui:ui/safety/is_fixed]
 tellraw @s [{"text":"[Super Awesome Enchanting] ","color":"dark_aqua","bold":true},{"text":"Workstations were restored. Any offline-owner escrow was returned here. Remove the datapack before restarting.","color":"yellow"}]
 """)
-    write_text(fn / "workstation/uninstall_one.mcfunction", """
-function sae:workstation/drop_slot/10
-function sae:workstation/drop_slot/12
-function sae:workstation/drop_slot/14
+    write_text(fn / "workstation/uninstall_one.mcfunction", f"""
+function sae:workstation/drop_slot/{target_slot}
+execute if data entity @s {{data:{{sae:{{mode:"transfer"}}}}}} run function sae:workstation/drop_slot/{destination_slot}
 setblock ~ ~ ~ minecraft:enchanting_table
 kill @e[type=block_display,tag=sae.workstation.display,distance=..1]
 kill @s
@@ -562,7 +638,7 @@ function sae:uninstall/drain_escrow
 """)
     write_text(fn / "uninstall/spawn_escrow_items.mcfunction", """
 execute unless data storage sae:escrow returning.items[0] run return 0
-summon item ~ ~1 ~ {Tags:["sae.uninstall_return"]}
+summon item ~ ~1 ~ {Item:{id:"minecraft:stone",count:1},Tags:["sae.uninstall_return"]}
 data modify entity @n[type=item,tag=sae.uninstall_return,distance=..3] Item set from storage sae:escrow returning.items[0]
 tag @n[type=item,tag=sae.uninstall_return,distance=..3] remove sae.uninstall_return
 data remove storage sae:escrow returning.items[0]
@@ -592,19 +668,21 @@ function sae:uninstall/spawn_escrow_items
     write_json(DATA / "sae/item_modifier/maintenance/clear_repair_cost.json", {"type": "minecraft:set_components", "components": {"minecraft:repair_cost": 0}})
 
     # Escrow is a persistent list of snapshots. Returned stacks spawn owner-bound at login.
-    write_text(fn / "escrow/store.mcfunction", """
-data modify storage sae:escrow pending set value {owner:[I;0,0,0,0],items:[]}
+    write_text(fn / "escrow/store.mcfunction", f"""
+data modify storage sae:escrow pending set value {{owner:[I;0,0,0,0],items:[]}}
 execute store result storage sae:escrow pending.owner[0] int 1 run scoreboard players get @s sae.uuid0
 execute store result storage sae:escrow pending.owner[1] int 1 run scoreboard players get @s sae.uuid1
 execute store result storage sae:escrow pending.owner[2] int 1 run scoreboard players get @s sae.uuid2
 execute store result storage sae:escrow pending.owner[3] int 1 run scoreboard players get @s sae.uuid3
 execute if data entity @s data.sae.snapshot.target run data modify storage sae:escrow pending.items append from entity @s data.sae.snapshot.target
-execute if data entity @s data.sae.snapshot.catalyst run data modify storage sae:escrow pending.items append from entity @s data.sae.snapshot.catalyst
 execute if data entity @s data.sae.snapshot.destination run data modify storage sae:escrow pending.items append from entity @s data.sae.snapshot.destination
 execute if data storage sae:escrow pending.items[0] run data modify storage sae:escrow entries append from storage sae:escrow pending
-item replace block ~ ~ ~ container.10 with air
-item replace block ~ ~ ~ container.12 with air
-item replace block ~ ~ ~ container.14 with air
+item replace block ~ ~ ~ container.{target_slot} with air
+scoreboard players set modified_slot fancyui.master {target_slot}
+function fancyui:manual_removal
+execute if data entity @s {{data:{{sae:{{mode:"transfer"}}}}}} run item replace block ~ ~ ~ container.{destination_slot} with air
+execute if data entity @s {{data:{{sae:{{mode:"transfer"}}}}}} run scoreboard players set modified_slot fancyui.master {destination_slot}
+execute if data entity @s {{data:{{sae:{{mode:"transfer"}}}}}} run function fancyui:manual_removal
 data remove storage sae:escrow pending
 function sae:workstation/session/release
 """)
@@ -657,7 +735,7 @@ data remove storage sae:escrow kept
 """)
     write_text(fn / "escrow/spawn_items.mcfunction", """
 execute unless data storage sae:escrow returning.items[0] run return 0
-summon item ~ ~1 ~ {Tags:["sae.escrow_return"],PickupDelay:0s}
+summon item ~ ~1 ~ {Item:{id:"minecraft:stone",count:1},Tags:["sae.escrow_return"],PickupDelay:0s}
 data modify entity @n[type=item,tag=sae.escrow_return,distance=..3] Item set from storage sae:escrow returning.items[0]
 data modify entity @n[type=item,tag=sae.escrow_return,distance=..3] Owner set from entity @s UUID
 tag @n[type=item,tag=sae.escrow_return,distance=..3] remove sae.escrow_return
@@ -665,38 +743,8 @@ data remove storage sae:escrow returning.items[0]
 function sae:escrow/spawn_items
 """)
 
-    # Preview and Catalyst operations.
-    write_text(fn / "workstation/preview.mcfunction", """
-scoreboard players set #valid sae.tmp 0
-scoreboard players set #candidates sae.tmp 0
-scoreboard players set #cost sae.tmp 0
-data remove entity @s data.sae.pending
-data remove entity @s data.sae.enchantment
-data remove entity @s data.sae.next
-data remove entity @s data.sae.valid
-execute if data entity @s {data:{sae:{mode:"transfer"}}} run function sae:transfer/preview
-execute unless data entity @s {data:{sae:{mode:"transfer"}}} if items block ~ ~ ~ container.10 minecraft:book run function sae:enchant/preview/book
-execute unless data entity @s {data:{sae:{mode:"transfer"}}} if items block ~ ~ ~ container.10 minecraft:enchanted_book run function sae:enchant/preview/book
-execute unless data entity @s {data:{sae:{mode:"transfer"}}} unless items block ~ ~ ~ container.10 minecraft:book unless items block ~ ~ ~ container.10 minecraft:enchanted_book run function sae:enchant/preview/equipment
-execute if score #candidates sae.tmp matches 1 run scoreboard players set #valid sae.tmp 1
-execute if score #candidates sae.tmp matches 2.. run scoreboard players set #valid sae.tmp 0
-execute store result entity @s data.sae.valid int 1 run scoreboard players get #valid sae.tmp
-execute store result entity @s data.sae.cost int 1 run scoreboard players get #cost sae.tmp
-function sae:workstation/preview/control
-""")
-
-    equipment_dispatch = []
-    for enchantment, (catalyst, required, _) in CATALYSTS.items():
-        supported = load_enchantment(enchantment)["supported_items"]
-        equipment_dispatch.append(
-            f"execute if items block ~ ~ ~ container.12 minecraft:{catalyst} if items block ~ ~ ~ container.10 {supported} run function sae:enchant/preview/equipment/{enchantment}"
-        )
-    write_text(fn / "enchant/preview/equipment.mcfunction", "\n".join([
-        "execute store result score #target_count sae.tmp run data get block ~ ~ ~ Items[{Slot:10b}].count",
-        "execute unless score #target_count sae.tmp matches 1 run return 0",
-        *equipment_dispatch,
-    ]))
-
+    # Item-first Workstation UI. FancyUI slot roles are fixed at initialization;
+    # modes therefore restyle the same controls rather than rebuilding the chest.
     exclusive_groups = []
     for path in sorted((VANILLA / "tags/enchantment/exclusive_set").glob("*.json")):
         values = [v.removeprefix("minecraft:") for v in json.loads(path.read_text(encoding="utf-8"))["values"]]
@@ -704,114 +752,441 @@ function sae:workstation/preview/control
             values = [v for v in values if v != "mending"]
         exclusive_groups.append(values)
 
-    display_names = {e: ("Unbreakable" if e == "mending" else e.replace("_curse", "").replace("_", " ").title()) for e in CATALYSTS}
-    for enchantment, (catalyst, required, _) in CATALYSTS.items():
-        conflicts = next((group for group in exclusive_groups if enchantment in group), [])
-        lines = [
-            f"execute store result score #catalyst_count sae.tmp run data get block ~ ~ ~ Items[{{Slot:12b}}].count",
-            f"execute unless score #catalyst_count sae.tmp matches {required}.. run return 0",
-        ]
-        for conflict in conflicts:
-            if conflict != enchantment:
-                lines.append(f'execute if data block ~ ~ ~ Items[{{Slot:10b}}].components."minecraft:enchantments"."minecraft:{conflict}" run return 0')
-        lines.extend([
-            "scoreboard players set #current sae.tmp 0",
-            f'execute store result score #current sae.tmp run data get block ~ ~ ~ Items[{{Slot:10b}}].components."minecraft:enchantments"."minecraft:{enchantment}"',
-            f"execute if score #current sae.tmp matches {maximums[enchantment]}.. run return 0",
-            "scoreboard players operation #next sae.tmp = #current sae.tmp",
-            "scoreboard players add #next sae.tmp 1",
-            "scoreboard players add #candidates sae.tmp 1",
-            "scoreboard players operation #cost sae.tmp = #next sae.tmp",
-            f'data modify entity @s data.sae.enchantment set value "minecraft:{enchantment}"',
-            "execute store result entity @s data.sae.next int 1 run scoreboard players get #next sae.tmp",
-            f'data modify entity @s data.sae.label set value "{display_names[enchantment]}"',
-            f'data modify entity @s data.sae.curse set value {str(enchantment in {"binding_curse", "vanishing_curse"}).lower()}',
-        ])
-        write_text(fn / f"enchant/preview/equipment/{enchantment}.mcfunction", "\n".join(lines))
+    display_names = {
+        enchantment: (
+            "Unbreakable"
+            if enchantment == "mending"
+            else enchantment.replace("_curse", "").replace("_", " ").title()
+        )
+        for enchantment in CATALYSTS
+    }
+    curse_enchantments = {"binding_curse", "vanishing_curse"}
+
+    def enchantment_order(value: str) -> tuple[bool, str]:
+        return value in curse_enchantments, display_names[value]
 
     catalyst_groups: dict[str, list[str]] = {}
     for enchantment, (catalyst, _, _) in CATALYSTS.items():
         catalyst_groups.setdefault(catalyst, []).append(enchantment)
-    book_dispatch = [
-        "execute store result score #target_count sae.tmp run data get block ~ ~ ~ Items[{Slot:10b}].count",
-        "execute unless score #target_count sae.tmp matches 1 run return 0",
-    ]
-    for catalyst in catalyst_groups:
-        book_dispatch.append(f"execute if items block ~ ~ ~ container.12 minecraft:{catalyst} run function sae:enchant/preview/book/{catalyst}")
-    write_text(fn / "enchant/preview/book.mcfunction", "\n".join(book_dispatch))
+    roman = {1: "I", 2: "II", 3: "III", 4: "IV", 5: "V"}
+    distinct_catalysts = sorted(catalyst_groups)
 
-    for catalyst, enchantments in catalyst_groups.items():
-        required = CATALYSTS[enchantments[0]][1]
-        lines = [
-            "execute store result score #catalyst_count sae.tmp run data get block ~ ~ ~ Items[{Slot:12b}].count",
-            f"execute unless score #catalyst_count sae.tmp matches {required}.. run return 0",
+    # Count only the owner's main inventory and hotbar. Slot -106 (offhand),
+    # armor, cursor, and nested containers are intentionally excluded.
+    for catalyst in distinct_catalysts:
+        lines = ["scoreboard players set #catalyst_count sae.tmp 0"]
+        for inventory_slot in range(36):
+            lines.extend([
+                "scoreboard players set #slot_count sae.tmp 0",
+                f'execute as @a[tag=sae.owner] store result score #slot_count sae.tmp run data get entity @s Inventory[{{Slot:{inventory_slot}b,id:"minecraft:{catalyst}"}}].count',
+                "scoreboard players operation #catalyst_count sae.tmp += #slot_count sae.tmp",
+            ])
+        write_text(fn / f"workstation/inventory/count/{catalyst}.mcfunction", "\n".join(lines))
+
+    def clear_button_lines(slot: int) -> list[str]:
+        return [
+            f'data modify block ~ ~ ~ Items[{{Slot:{slot}b}}].components."minecraft:item_model" set value "minecraft:gray_stained_glass_pane"',
+            f'data modify block ~ ~ ~ Items[{{Slot:{slot}b}}].components."minecraft:custom_name" set value {{text:" ",italic:false}}',
+            f'data remove block ~ ~ ~ Items[{{Slot:{slot}b}}].components."minecraft:lore"',
+            f'data modify block ~ ~ ~ Items[{{Slot:{slot}b}}].components."minecraft:custom_data".sae set value {{action:"empty"}}',
         ]
-        lines.extend(f"function sae:enchant/preview/book_candidate/{e}" for e in enchantments)
+
+    clear_options: list[str] = []
+    for slot in option_slots:
+        clear_options.extend(clear_button_lines(slot))
+    write_text(fn / "workstation/options/clear.mcfunction", "\n".join(clear_options))
+
+    for index, slot in enumerate(option_slots):
+        write_text(fn / f"workstation/options/place/{slot}.mcfunction", "\n".join([
+            f'data modify block ~ ~ ~ Items[{{Slot:{slot}b}}].components."minecraft:item_model" set from storage sae:runtime option.id',
+            f'data modify block ~ ~ ~ Items[{{Slot:{slot}b}}].components."minecraft:custom_name" set from storage sae:runtime option.name',
+            f'data modify block ~ ~ ~ Items[{{Slot:{slot}b}}].components."minecraft:lore" set from storage sae:runtime option.lore',
+            f'data modify block ~ ~ ~ Items[{{Slot:{slot}b}}].components."minecraft:custom_data".sae set from storage sae:runtime option.data',
+        ]))
+    place_dispatch = [
+        f"execute if score #option_index sae.tmp matches {index} run function sae:workstation/options/place/{slot}"
+        for index, slot in enumerate(option_slots)
+    ]
+    place_dispatch.append("scoreboard players add #option_index sae.tmp 1")
+    write_text(fn / "workstation/options/place.mcfunction", "\n".join(place_dispatch))
+
+    write_text(fn / "workstation/options/add_cost_lore.mcfunction", "\n".join(
+        f'execute if score #cost sae.tmp matches {level} run data modify storage sae:runtime option.lore append value {{text:"Cost: {level} level{'' if level == 1 else 's'}",color:"gray",italic:false}}'
+        for level in range(1, 6)
+    ))
+    write_text(fn / "workstation/options/add_missing_lore.mcfunction", """
+scoreboard players operation #missing sae.tmp = #required sae.tmp
+scoreboard players operation #missing sae.tmp -= #catalyst_count sae.tmp
+execute store result storage sae:runtime macro.missing int 1 run scoreboard players get #missing sae.tmp
+function sae:workstation/options/add_missing_lore_macro with storage sae:runtime macro
+""")
+    write_text(fn / "workstation/options/add_missing_lore_macro.mcfunction", '$data modify storage sae:runtime option.lore append value [{text:"Missing: ",color:"red",italic:false},{text:"$(missing)",color:"red",italic:false},{text:" Catalyst",color:"red",italic:false}]')
+
+    write_text(fn / "workstation/options/style_availability.mcfunction", """
+execute unless score #available sae.tmp matches 1 run data modify storage sae:runtime option.name.color set value "dark_gray"
+execute unless score #available sae.tmp matches 1 run data modify storage sae:runtime option.lore append value {text:"Unavailable",color:"red",italic:false}
+execute if score #available sae.tmp matches 1 run data modify storage sae:runtime option.lore append value {text:"Click to apply",color:"yellow",italic:false}
+""")
+
+    equipment_dispatch: list[str] = ["scoreboard players set #option_index sae.tmp 0"]
+    for enchantment in sorted(CATALYSTS, key=enchantment_order):
+        catalyst, required, _ = CATALYSTS[enchantment]
+        supported = load_enchantment(enchantment)["supported_items"]
+        name = display_names[enchantment]
+        catalyst_name = catalyst.replace("_", " ").title()
+        conflicts = [value for value in next((group for group in exclusive_groups if enchantment in group), []) if value != enchantment]
+        equipment_dispatch.append(
+            f"execute if items block ~ ~ ~ container.{target_slot} {supported} run function sae:workstation/options/equipment/{enchantment}"
+        )
+        lines = [
+            f'data modify storage sae:runtime option set value {{id:"minecraft:{catalyst}",name:{{text:"{name}",color:"aqua",italic:false}},lore:[{{text:"Catalyst: {required} × {catalyst_name}",color:"gray",italic:false}}],data:{{action:"enchant_option",option:"{enchantment}"}}}}',
+            "scoreboard players set #available sae.tmp 1",
+            "scoreboard players set #current sae.tmp 0",
+            f'execute store result score #current sae.tmp run data get block ~ ~ ~ Items[{{Slot:{target_slot}b}}].components."minecraft:enchantments"."minecraft:{enchantment}"',
+            "scoreboard players operation #next sae.tmp = #current sae.tmp",
+            "scoreboard players add #next sae.tmp 1",
+            f"execute if score #current sae.tmp matches {maximums[enchantment]}.. run scoreboard players set #next sae.tmp {maximums[enchantment]}",
+        ]
+        for level in range(1, maximums[enchantment] + 1):
+            lines.append(
+                f'execute if score #next sae.tmp matches {level} run data modify storage sae:runtime option.name set value {{text:"{name} {roman[level]}",color:"aqua",italic:false}}'
+            )
         lines.extend([
-            "execute unless data entity @s data.sae.pending run return 0",
-            "scoreboard players set #candidates sae.tmp 1",
-            'data modify entity @s data.sae.label set value "Book upgrade"',
-            "data modify entity @s data.sae.curse set value false",
+            "scoreboard players operation #cost sae.tmp = #next sae.tmp",
+            "function sae:workstation/options/add_cost_lore",
+            f'execute if score #current sae.tmp matches {maximums[enchantment]}.. run data modify storage sae:runtime option.lore append value {{text:"Maximum tier reached",color:"red",italic:false}}',
+            f"execute if score #current sae.tmp matches {maximums[enchantment]}.. run scoreboard players set #available sae.tmp 0",
         ])
-        if any(e in {"binding_curse", "vanishing_curse"} for e in enchantments):
-            lines[-1] = "data modify entity @s data.sae.curse set value true"
-        write_text(fn / f"enchant/preview/book/{catalyst}.mcfunction", "\n".join(lines))
+        for conflict in conflicts:
+            conflict_name = display_names.get(conflict, conflict.replace("_", " ").title())
+            lines.extend([
+                f'execute if data block ~ ~ ~ Items[{{Slot:{target_slot}b}}].components."minecraft:enchantments"."minecraft:{conflict}" run data modify storage sae:runtime option.lore append value {{text:"Conflicts with {conflict_name}",color:"red",italic:false}}',
+                f'execute if data block ~ ~ ~ Items[{{Slot:{target_slot}b}}].components."minecraft:enchantments"."minecraft:{conflict}" run scoreboard players set #available sae.tmp 0',
+            ])
+        lines.extend([
+            f"scoreboard players set #required sae.tmp {required}",
+            f"function sae:workstation/inventory/count/{catalyst}",
+            "execute if score #catalyst_count sae.tmp < #required sae.tmp run function sae:workstation/options/add_missing_lore",
+            "execute if score #catalyst_count sae.tmp < #required sae.tmp run scoreboard players set #available sae.tmp 0",
+            "scoreboard players set #levels sae.tmp 0",
+            "execute as @a[tag=sae.owner] store result score #levels sae.tmp run experience query @s levels",
+            "scoreboard players set #level_ok sae.tmp 0",
+            "execute if score #levels sae.tmp >= #cost sae.tmp run scoreboard players set #level_ok sae.tmp 1",
+            "execute if entity @a[tag=sae.owner,gamemode=creative] run scoreboard players set #level_ok sae.tmp 1",
+            "execute unless score #level_ok sae.tmp matches 1 run data modify storage sae:runtime option.lore append value {text:\"Insufficient levels\",color:\"red\",italic:false}",
+            "execute unless score #level_ok sae.tmp matches 1 run scoreboard players set #available sae.tmp 0",
+        ])
+        if enchantment in {"binding_curse", "vanishing_curse"}:
+            lines.extend([
+                'data modify storage sae:runtime option.lore append value {text:"Grindstones cannot remove this",color:"dark_red",italic:false}',
+                "execute if score #available sae.tmp matches 1 run data modify storage sae:runtime option.lore append value {text:\"First click arms this curse\",color:\"yellow\",italic:false}",
+                f'execute if score #available sae.tmp matches 1 if data entity @s data.sae.armed{{kind:"curse",choice:"minecraft:{enchantment}"}} if score @s sae.timer matches 1.. run data modify storage sae:runtime option.lore[-1] set value {{text:"Click again to apply curse",color:"red",italic:false}}',
+            ])
+        else:
+            lines.append("function sae:workstation/options/style_availability")
+        if enchantment in {"binding_curse", "vanishing_curse"}:
+            lines.extend([
+                "execute unless score #available sae.tmp matches 1 run data modify storage sae:runtime option.name.color set value \"dark_gray\"",
+                "execute unless score #available sae.tmp matches 1 run data modify storage sae:runtime option.lore append value {text:\"Unavailable\",color:\"red\",italic:false}",
+            ])
+        lines.append("function sae:workstation/options/place")
+        write_text(fn / f"workstation/options/equipment/{enchantment}.mcfunction", "\n".join(lines))
+    equipment_dispatch.append("execute if score #option_index sae.tmp matches 0 run function sae:workstation/options/instruction_unsupported")
+    write_text(fn / "workstation/options/equipment.mcfunction", "\n".join(equipment_dispatch))
+
+    # Book choices are grouped by Catalyst and ordered by their first result name.
+    ordered_book_groups = sorted(
+        catalyst_groups.items(),
+        key=lambda entry: (
+            any(value in curse_enchantments for value in entry[1]),
+            display_names[sorted(entry[1], key=enchantment_order)[0]],
+        ),
+    )
+    for page, page_groups in enumerate([ordered_book_groups[:18], ordered_book_groups[18:]]):
+        lines = ["scoreboard players set #option_index sae.tmp 0"]
+        lines.extend(f"function sae:workstation/options/book/{catalyst}" for catalyst, _ in page_groups)
+        write_text(fn / f"workstation/options/book_page_{page}.mcfunction", "\n".join(lines))
+
+    for catalyst, raw_enchantments in ordered_book_groups:
+        enchantments = sorted(raw_enchantments, key=enchantment_order)
+        required = CATALYSTS[enchantments[0]][1]
+        catalyst_name = catalyst.replace("_", " ").title()
+        option_name = ", ".join(display_names[value] for value in enchantments)
+        lines = [
+            f'data modify storage sae:runtime option set value {{id:"minecraft:{catalyst}",name:{{text:"{option_name}",color:"aqua",italic:false}},lore:[{{text:"Catalyst: {required} × {catalyst_name}",color:"gray",italic:false}}],data:{{action:"enchant_option",book:1b,catalyst:"{catalyst}"}}}}',
+            "scoreboard players set #available sae.tmp 1",
+            "scoreboard players set #any sae.tmp 0",
+            "scoreboard players set #cost sae.tmp 0",
+        ]
+        for enchantment in enchantments:
+            name = display_names[enchantment]
+            lines.extend([
+                "scoreboard players set #current sae.tmp 0",
+                f'execute store result score #current sae.tmp run data get block ~ ~ ~ Items[{{Slot:{target_slot}b}}].components."minecraft:stored_enchantments"."minecraft:{enchantment}"',
+                "scoreboard players operation #next sae.tmp = #current sae.tmp",
+                "scoreboard players add #next sae.tmp 1",
+                f"execute if score #current sae.tmp matches {maximums[enchantment]}.. run scoreboard players set #next sae.tmp {maximums[enchantment]}",
+                f"execute unless score #current sae.tmp matches {maximums[enchantment]}.. run scoreboard players set #any sae.tmp 1",
+                f"execute unless score #current sae.tmp matches {maximums[enchantment]}.. if score #next sae.tmp > #cost sae.tmp run scoreboard players operation #cost sae.tmp = #next sae.tmp",
+            ])
+            for level in range(1, maximums[enchantment] + 1):
+                lines.append(
+                    f'execute if score #next sae.tmp matches {level} run data modify storage sae:runtime option.lore append value {{text:"{name} {roman[level]}",color:"gray",italic:false}}'
+                )
+        lines.extend([
+            "function sae:workstation/options/add_cost_lore",
+            "execute unless score #any sae.tmp matches 1 run data modify storage sae:runtime option.lore append value {text:\"Every result is at maximum tier\",color:\"red\",italic:false}",
+            "execute unless score #any sae.tmp matches 1 run scoreboard players set #available sae.tmp 0",
+            f"scoreboard players set #required sae.tmp {required}",
+            f"function sae:workstation/inventory/count/{catalyst}",
+            "execute if score #catalyst_count sae.tmp < #required sae.tmp run function sae:workstation/options/add_missing_lore",
+            "execute if score #catalyst_count sae.tmp < #required sae.tmp run scoreboard players set #available sae.tmp 0",
+            "scoreboard players set #levels sae.tmp 0",
+            "execute as @a[tag=sae.owner] store result score #levels sae.tmp run experience query @s levels",
+            "scoreboard players set #level_ok sae.tmp 0",
+            "execute if score #levels sae.tmp >= #cost sae.tmp run scoreboard players set #level_ok sae.tmp 1",
+            "execute if entity @a[tag=sae.owner,gamemode=creative] run scoreboard players set #level_ok sae.tmp 1",
+            "execute unless score #level_ok sae.tmp matches 1 run data modify storage sae:runtime option.lore append value {text:\"Insufficient levels\",color:\"red\",italic:false}",
+            "execute unless score #level_ok sae.tmp matches 1 run scoreboard players set #available sae.tmp 0",
+        ])
+        if any(value in {"binding_curse", "vanishing_curse"} for value in enchantments):
+            lines.extend([
+                'data modify storage sae:runtime option.lore append value {text:"Grindstones cannot remove this",color:"dark_red",italic:false}',
+                "execute if score #available sae.tmp matches 1 run data modify storage sae:runtime option.lore append value {text:\"First click arms this curse\",color:\"yellow\",italic:false}",
+                f'execute if score #available sae.tmp matches 1 if data entity @s data.sae.armed{{kind:"curse",choice:"{catalyst}"}} if score @s sae.timer matches 1.. run data modify storage sae:runtime option.lore[-1] set value {{text:"Click again to apply curse",color:"red",italic:false}}',
+                "execute unless score #available sae.tmp matches 1 run data modify storage sae:runtime option.name.color set value \"dark_gray\"",
+                "execute unless score #available sae.tmp matches 1 run data modify storage sae:runtime option.lore append value {text:\"Unavailable\",color:\"red\",italic:false}",
+            ])
+        else:
+            lines.append("function sae:workstation/options/style_availability")
+        lines.append("function sae:workstation/options/place")
+        write_text(fn / f"workstation/options/book/{catalyst}.mcfunction", "\n".join(lines))
+
+    write_text(fn / "workstation/options/instruction_empty.mcfunction", f"""
+data modify block ~ ~ ~ Items[{{Slot:{option_slots[0]}b}}].components."minecraft:item_model" set value "minecraft:book"
+data modify block ~ ~ ~ Items[{{Slot:{option_slots[0]}b}}].components."minecraft:custom_name" set value {{text:"Insert equipment or a Book",color:"yellow",italic:false}}
+data modify block ~ ~ ~ Items[{{Slot:{option_slots[0]}b}}].components."minecraft:lore" set value [{{text:"Available enchantments will appear here",color:"gray",italic:false}}]
+""")
+    write_text(fn / "workstation/options/instruction_stack.mcfunction", f"""
+data modify block ~ ~ ~ Items[{{Slot:{option_slots[0]}b}}].components."minecraft:item_model" set value "minecraft:barrier"
+data modify block ~ ~ ~ Items[{{Slot:{option_slots[0]}b}}].components."minecraft:custom_name" set value {{text:"Insert exactly one item",color:"red",italic:false}}
+""")
+    write_text(fn / "workstation/options/instruction_unsupported.mcfunction", f"""
+data modify block ~ ~ ~ Items[{{Slot:{option_slots[0]}b}}].components."minecraft:item_model" set value "minecraft:barrier"
+data modify block ~ ~ ~ Items[{{Slot:{option_slots[0]}b}}].components."minecraft:custom_name" set value {{text:"This item cannot be enchanted",color:"red",italic:false}}
+""")
+
+    write_text(fn / "workstation/options/render.mcfunction", f"""
+function sae:workstation/options/clear
+data remove entity @s data.sae.book_target
+execute if data entity @s {{data:{{sae:{{mode:"transfer"}}}}}} run return run function sae:transfer/render
+function sae:workstation/options/render_enchant_controls
+scoreboard players set #target_count sae.tmp 0
+execute store result score #target_count sae.tmp run data get block ~ ~ ~ Items[{{Slot:{target_slot}b}}].count
+execute if score #target_count sae.tmp matches 0 run return run function sae:workstation/options/instruction_empty
+execute unless score #target_count sae.tmp matches 1 run return run function sae:workstation/options/instruction_stack
+execute if items block ~ ~ ~ container.{target_slot} minecraft:book run data modify entity @s data.sae.book_target set value true
+execute if items block ~ ~ ~ container.{target_slot} minecraft:enchanted_book run data modify entity @s data.sae.book_target set value true
+execute if data entity @s data.sae.book_target run function sae:workstation/options/render_book_page_control
+execute if data entity @s {{data:{{sae:{{book_target:true,page:1}}}}}} run return run function sae:workstation/options/book_page_1
+execute if data entity @s data.sae.book_target run return run function sae:workstation/options/book_page_0
+function sae:workstation/options/equipment
+""")
+    write_text(fn / "workstation/options/render_enchant_controls.mcfunction", f"""
+data modify block ~ ~ ~ Items[{{Slot:0b}}].components."minecraft:item_model" set value "minecraft:gray_stained_glass_pane"
+data modify block ~ ~ ~ Items[{{Slot:0b}}].components."minecraft:custom_name" set value {{text:" ",italic:false}}
+data remove block ~ ~ ~ Items[{{Slot:0b}}].components."minecraft:lore"
+data modify block ~ ~ ~ Items[{{Slot:1b}}].components."minecraft:item_model" set value "minecraft:enchanting_table"
+data modify block ~ ~ ~ Items[{{Slot:1b}}].components."minecraft:custom_name" set value {{text:"Target",color:"white",italic:false}}
+function sae:workstation/destination_guard/show
+function sae:workstation/options/clear_transfer_chrome
+function sae:workstation/options/clear_page_control
+function sae:workstation/options/clear_transfer_control
+data modify block ~ ~ ~ Items[{{Slot:18b}}].components."minecraft:item_model" set value "minecraft:amethyst_shard"
+data modify block ~ ~ ~ Items[{{Slot:18b}}].components."minecraft:custom_name" set value {{text:"Switch to Transfer",color:"white",italic:false}}
+data modify block ~ ~ ~ Items[{{Slot:18b}}].components."minecraft:lore" set value [{{text:"Move all enchantments to a compatible item",color:"gray",italic:false}}]
+data modify block ~ ~ ~ Items[{{Slot:18b}}].components."minecraft:custom_data".sae set value {{action:"mode_toggle"}}
+""")
+    transfer_chrome_clear: list[str] = []
+    for slot in (2, 9):
+        transfer_chrome_clear.extend(clear_button_lines(slot))
+    write_text(fn / "workstation/options/clear_transfer_chrome.mcfunction", "\n".join(transfer_chrome_clear))
+    write_text(fn / "workstation/options/clear_page_control.mcfunction", "\n".join(clear_button_lines(19)))
+    write_text(fn / "workstation/options/clear_transfer_control.mcfunction", "\n".join(clear_button_lines(20)))
+    write_text(fn / "workstation/options/render_book_page_control.mcfunction", """
+data modify block ~ ~ ~ Items[{Slot:19b}].components."minecraft:item_model" set value "minecraft:arrow"
+data modify block ~ ~ ~ Items[{Slot:19b}].components."minecraft:custom_data".sae set value {action:"page_toggle"}
+execute if data entity @s {data:{sae:{page:0}}} run data modify block ~ ~ ~ Items[{Slot:19b}].components."minecraft:custom_name" set value {text:"Next — Page 1/2",color:"white",italic:false}
+execute if data entity @s {data:{sae:{page:1}}} run data modify block ~ ~ ~ Items[{Slot:19b}].components."minecraft:custom_name" set value {text:"Previous — Page 2/2",color:"white",italic:false}
+""")
+
+    # Selection validation is independent from rendering and always rechecks live
+    # target, inventory, conflicts, tiers, and experience before mutation.
+    write_text(fn / "workstation/select_option.mcfunction", """
+function sae:workstation/control/check_owner
+execute unless score #actor_ok sae.tmp matches 1 run return 0
+execute if entity @a[tag=fancyui.button.clicker,scores={sae.cooldown=1..}] run return run playsound minecraft:block.note_block.bass master @a[tag=fancyui.button.clicker] ~ ~ ~ 0.6 0.7
+tag @a remove sae.owner
+tag @a[tag=fancyui.button.clicker] add sae.owner
+scoreboard players set #valid sae.tmp 0
+data remove entity @s data.sae.pending
+data remove entity @s data.sae.enchantment
+data remove entity @s data.sae.catalyst
+data remove entity @s data.sae.curse
+function sae:enchant/validate_selection
+tag @a remove sae.owner
+execute unless score #valid sae.tmp matches 1 run return run playsound minecraft:block.note_block.bass master @a[tag=fancyui.button.clicker] ~ ~ ~ 0.6 0.7
+execute if data entity @s data.sae{curse:true} run return run function sae:workstation/select_curse
+function sae:workstation/apply_selection
+""")
+    validation_dispatch: list[str] = []
+    for enchantment in CATALYSTS:
+        validation_dispatch.append(
+            f'execute if data storage fancyui:data button.components."minecraft:custom_data".sae{{option:"{enchantment}"}} run function sae:enchant/validate/equipment/{enchantment}'
+        )
+    for catalyst in distinct_catalysts:
+        validation_dispatch.append(
+            f'execute if data storage fancyui:data button.components."minecraft:custom_data".sae{{book:1b,catalyst:"{catalyst}"}} run function sae:enchant/validate/book/{catalyst}'
+        )
+    write_text(fn / "enchant/validate_selection.mcfunction", "\n".join(validation_dispatch))
+
+    for enchantment, (catalyst, required, _) in CATALYSTS.items():
+        supported = load_enchantment(enchantment)["supported_items"]
+        conflicts = [value for value in next((group for group in exclusive_groups if enchantment in group), []) if value != enchantment]
+        lines = [
+            f"execute unless items block ~ ~ ~ container.{target_slot} {supported} run return 0",
+            "scoreboard players set #target_count sae.tmp 0",
+            f"execute store result score #target_count sae.tmp run data get block ~ ~ ~ Items[{{Slot:{target_slot}b}}].count",
+            "execute unless score #target_count sae.tmp matches 1 run return 0",
+        ]
+        lines.extend(
+            f'execute if data block ~ ~ ~ Items[{{Slot:{target_slot}b}}].components."minecraft:enchantments"."minecraft:{conflict}" run return 0'
+            for conflict in conflicts
+        )
+        lines.extend([
+            "scoreboard players set #current sae.tmp 0",
+            f'execute store result score #current sae.tmp run data get block ~ ~ ~ Items[{{Slot:{target_slot}b}}].components."minecraft:enchantments"."minecraft:{enchantment}"',
+            f"execute if score #current sae.tmp matches {maximums[enchantment]}.. run return 0",
+            "scoreboard players operation #cost sae.tmp = #current sae.tmp",
+            "scoreboard players add #cost sae.tmp 1",
+            f"scoreboard players set #required sae.tmp {required}",
+            f"function sae:workstation/inventory/count/{catalyst}",
+            "execute if score #catalyst_count sae.tmp < #required sae.tmp run return 0",
+            "scoreboard players set #levels sae.tmp 0",
+            "execute as @a[tag=sae.owner] store result score #levels sae.tmp run experience query @s levels",
+            "execute unless entity @a[tag=sae.owner,gamemode=creative] if score #levels sae.tmp < #cost sae.tmp run return 0",
+            "scoreboard players set #valid sae.tmp 1",
+            f'data modify entity @s data.sae.enchantment set value "minecraft:{enchantment}"',
+            f'data modify entity @s data.sae.catalyst set value "{catalyst}"',
+            f"data modify entity @s data.sae.next set value {maximums[enchantment]}",
+            "execute store result entity @s data.sae.next int 1 run scoreboard players get #cost sae.tmp",
+            f'data modify entity @s data.sae.curse set value {str(enchantment in {"binding_curse", "vanishing_curse"}).lower()}',
+        ])
+        write_text(fn / f"enchant/validate/equipment/{enchantment}.mcfunction", "\n".join(lines))
 
     for enchantment in CATALYSTS:
-        component = "minecraft:stored_enchantments"
         lines = [
             "scoreboard players set #current sae.tmp 0",
-            f'execute store result score #current sae.tmp run data get block ~ ~ ~ Items[{{Slot:10b}}].components."{component}"."minecraft:{enchantment}"',
+            f'execute store result score #current sae.tmp run data get block ~ ~ ~ Items[{{Slot:{target_slot}b}}].components."minecraft:stored_enchantments"."minecraft:{enchantment}"',
             f"execute if score #current sae.tmp matches {maximums[enchantment]}.. run return 0",
             "scoreboard players operation #next sae.tmp = #current sae.tmp",
             "scoreboard players add #next sae.tmp 1",
             f'execute store result entity @s data.sae.pending."minecraft:{enchantment}" int 1 run scoreboard players get #next sae.tmp',
             "execute if score #next sae.tmp > #cost sae.tmp run scoreboard players operation #cost sae.tmp = #next sae.tmp",
         ]
-        write_text(fn / f"enchant/preview/book_candidate/{enchantment}.mcfunction", "\n".join(lines))
+        write_text(fn / f"enchant/validate/book_candidate/{enchantment}.mcfunction", "\n".join(lines))
+    for catalyst, enchantments in catalyst_groups.items():
+        required = CATALYSTS[enchantments[0]][1]
+        lines = [
+            f"execute unless items block ~ ~ ~ container.{target_slot} minecraft:book unless items block ~ ~ ~ container.{target_slot} minecraft:enchanted_book run return 0",
+            "scoreboard players set #target_count sae.tmp 0",
+            f"execute store result score #target_count sae.tmp run data get block ~ ~ ~ Items[{{Slot:{target_slot}b}}].count",
+            "execute unless score #target_count sae.tmp matches 1 run return 0",
+            "scoreboard players set #cost sae.tmp 0",
+        ]
+        lines.extend(f"function sae:enchant/validate/book_candidate/{value}" for value in enchantments)
+        lines.extend([
+            "execute unless data entity @s data.sae.pending run return 0",
+            f"scoreboard players set #required sae.tmp {required}",
+            f"function sae:workstation/inventory/count/{catalyst}",
+            "execute if score #catalyst_count sae.tmp < #required sae.tmp run return 0",
+            "scoreboard players set #levels sae.tmp 0",
+            "execute as @a[tag=sae.owner] store result score #levels sae.tmp run experience query @s levels",
+            "execute unless entity @a[tag=sae.owner,gamemode=creative] if score #levels sae.tmp < #cost sae.tmp run return 0",
+            "scoreboard players set #valid sae.tmp 1",
+            f'data modify entity @s data.sae.catalyst set value "{catalyst}"',
+            f'data modify entity @s data.sae.curse set value {str(any(value in {"binding_curse", "vanishing_curse"} for value in enchantments)).lower()}',
+        ])
+        write_text(fn / f"enchant/validate/book/{catalyst}.mcfunction", "\n".join(lines))
 
-    write_text(fn / "workstation/preview/control.mcfunction", """
-data modify storage sae:runtime control set from block ~ ~ ~ Items[{Slot:16b}]
-execute if score #valid sae.tmp matches 1 run function sae:workstation/preview/control_valid
-execute unless score #valid sae.tmp matches 1 run function sae:workstation/preview/control_invalid
-data modify block ~ ~ ~ Items[{Slot:16b}] set from storage sae:runtime control
-data remove storage sae:runtime control
+    write_text(fn / "workstation/select_curse.mcfunction", """
+scoreboard players set #armed_match sae.tmp 0
+function sae:workstation/select_curse_match
+execute if score #armed_match sae.tmp matches 1 if score @s sae.timer matches 1.. run return run function sae:workstation/apply_selection
+data modify entity @s data.sae.armed set value {kind:"curse",choice:""}
+data modify entity @s data.sae.armed.choice set from entity @s data.sae.catalyst
+execute if data entity @s data.sae.enchantment run data modify entity @s data.sae.armed.choice set from entity @s data.sae.enchantment
+scoreboard players set @s sae.timer 60
+playsound minecraft:block.enchantment_table.use master @a[tag=fancyui.button.clicker] ~ ~ ~ 0.7 0.7
 """)
-    write_text(fn / "workstation/preview/control_invalid.mcfunction", """
-data modify storage sae:runtime control.id set value "minecraft:barrier"
-data modify storage sae:runtime control.components."minecraft:custom_name" set value {text:"Cannot confirm",color:"red",italic:false}
-data modify storage sae:runtime control.components."minecraft:lore" set value [{text:"Insert valid inputs or resolve the conflict",color:"gray",italic:false}]
-""")
-    write_text(fn / "workstation/preview/control_valid.mcfunction", """
-data modify storage sae:runtime macro.cost set from entity @s data.sae.cost
-data modify storage sae:runtime macro.label set from entity @s data.sae.label
-data modify storage sae:runtime control.id set value "minecraft:lime_dye"
-function sae:workstation/preview/control_valid_macro with storage sae:runtime macro
-execute if data entity @s data.sae{curse:true} run function sae:workstation/preview/control_curse
-""")
-    write_text(fn / "workstation/preview/control_valid_macro.mcfunction", """
-$data modify storage sae:runtime control.components."minecraft:custom_name" set value {text:"Apply $(label)",color:"green",italic:false}
-$data modify storage sae:runtime control.components."minecraft:lore" set value [{text:"Cost: $(cost) levels",color:"gray",italic:false},{text:"Click to confirm",color:"yellow",italic:false}]
-""")
-    write_text(fn / "workstation/preview/control_curse.mcfunction", """
-data modify storage sae:runtime control.id set value "minecraft:red_dye"
-data modify storage sae:runtime control.components."minecraft:custom_name" set value {text:"Apply Curse",color:"red",italic:false}
-data modify storage sae:runtime control.components."minecraft:lore" set value [{text:"Grindstones cannot remove this enchantment",color:"dark_red",italic:false},{text:"Click to confirm",color:"yellow",italic:false}]
-""")
+    curse_matches = []
+    for value in ["binding_curse", "vanishing_curse"]:
+        curse_matches.append(
+            f'execute if data entity @s data.sae.armed{{choice:"minecraft:{value}"}} if data entity @s data.sae{{enchantment:"minecraft:{value}"}} run scoreboard players set #armed_match sae.tmp 1'
+        )
+        curse_matches.append(
+            f'execute if data entity @s data.sae.armed{{choice:"{CATALYSTS[value][0]}"}} if data entity @s data.sae{{catalyst:"{CATALYSTS[value][0]}"}} run scoreboard players set #armed_match sae.tmp 1'
+        )
+    write_text(fn / "workstation/select_curse_match.mcfunction", "\n".join(curse_matches))
 
-    write_text(fn / "workstation/confirm.mcfunction", """
-execute unless entity @s[tag=sae.session] run return run tellraw @a[tag=fancyui.button.clicker] {"text":"Insert a target item first.","color":"red"}
-function sae:workstation/session/check_clicker
-execute unless score #actor_ok sae.tmp matches 1 run return run tellraw @a[tag=fancyui.button.clicker] {"text":"This Workstation belongs to another player.","color":"red"}
-function sae:workstation/preview
-execute unless data entity @s data.sae{valid:1} run return run tellraw @a[tag=fancyui.button.clicker] {"text":"The inputs no longer describe a valid operation.","color":"red"}
-execute as @a[tag=fancyui.button.clicker] store result score #levels sae.tmp run experience query @s levels
-execute unless entity @a[tag=fancyui.button.clicker,gamemode=creative] if score #levels sae.tmp < #cost sae.tmp run return run tellraw @a[tag=fancyui.button.clicker] {"text":"You do not have enough levels.","color":"red"}
-execute if data entity @s {data:{sae:{mode:"transfer"}}} run function sae:transfer/apply
-execute unless data entity @s {data:{sae:{mode:"transfer"}}} run function sae:enchant/apply
+    write_text(fn / "workstation/apply_selection.mcfunction", f"""
+execute if data entity @s data.sae.pending run function sae:enchant/apply_book
+execute unless data entity @s data.sae.pending run function sae:enchant/apply_equipment
+scoreboard players set modified_slot fancyui.master {target_slot}
+function fancyui:manual_placement
+function sae:workstation/consume_selected_catalyst
+function sae:workstation/charge_levels
+scoreboard players set @a[tag=fancyui.button.clicker] sae.cooldown 6
+data remove entity @s data.sae.armed
+scoreboard players set @s sae.timer 0
+playsound minecraft:block.enchantment_table.use master @a[tag=fancyui.button.clicker] ~ ~ ~ 1 1
 function sae:workstation/session/snapshot
+""")
+    write_text(fn / "transfer/deliver.mcfunction", """
+execute as @e[type=marker,tag=fancyui.container] at @s if data entity @s data.sae.pending_delivery run function sae:transfer/deliver_one
+""")
+    write_text(fn / "transfer/deliver_one.mcfunction", f"""
+function sae:workstation/session/tag_owner
+scoreboard players set #delivered sae.tmp 0
+execute if entity @a[tag=sae.owner,limit=1] unless items entity @a[tag=sae.owner,limit=1] player.cursor * run function sae:transfer/deliver_cursor
+execute if score #delivered sae.tmp matches 0 run function sae:transfer/deliver_drop
+item replace block ~ ~ ~ container.{destination_slot} with air
+scoreboard players set modified_slot fancyui.master {destination_slot}
+function fancyui:manual_removal
+data remove entity @s data.sae.pending_delivery
+tag @a remove sae.owner
+function sae:workstation/session/release
 function sae:workstation/render
 """)
+    write_text(fn / "transfer/deliver_cursor.mcfunction", f"""
+item replace entity @a[tag=sae.owner,limit=1] player.cursor from block ~ ~ ~ container.{destination_slot}
+scoreboard players set #delivered sae.tmp 1
+""")
+    write_text(fn / "transfer/deliver_drop.mcfunction", f"""
+summon item ~ ~1 ~ {{Item:{{id:"minecraft:stone",count:1}},Tags:["sae.transfer_result"]}}
+data modify entity @n[type=item,tag=sae.transfer_result,distance=..3] Item set from block ~ ~ ~ Items[{{Slot:{destination_slot}b}}]
+execute if entity @a[tag=sae.owner,limit=1] run data modify entity @n[type=item,tag=sae.transfer_result,distance=..3] Owner set from entity @a[tag=sae.owner,limit=1] UUID
+tag @n[type=item,tag=sae.transfer_result,distance=..3] remove sae.transfer_result
+scoreboard players set #delivered sae.tmp 1
+""")
+    consume_dispatch = []
+    for catalyst in distinct_catalysts:
+        required = max(CATALYSTS[value][1] for value in catalyst_groups[catalyst])
+        consume_dispatch.append(
+            f'execute if data entity @s data.sae{{catalyst:"{catalyst}"}} run clear @a[tag=fancyui.button.clicker] minecraft:{catalyst} {required}'
+        )
+    write_text(fn / "workstation/consume_selected_catalyst.mcfunction", "\n".join(consume_dispatch))
+
     write_text(fn / "workstation/session/check_clicker.mcfunction", """
 scoreboard players set #actor_ok sae.tmp 0
 scoreboard players operation #owner0 sae.tmp = @s sae.uuid0
@@ -824,39 +1199,22 @@ execute as @a[tag=fancyui.button.clicker] store result score @s sae.uuid2 run da
 execute as @a[tag=fancyui.button.clicker] store result score @s sae.uuid3 run data get entity @s UUID[3]
 execute as @a[tag=fancyui.button.clicker] if score @s sae.uuid0 = #owner0 sae.tmp if score @s sae.uuid1 = #owner1 sae.tmp if score @s sae.uuid2 = #owner2 sae.tmp if score @s sae.uuid3 = #owner3 sae.tmp run scoreboard players set #actor_ok sae.tmp 1
 """)
-    write_text(fn / "enchant/apply.mcfunction", """
-execute if data entity @s data.sae.pending run function sae:enchant/apply_book
-execute unless data entity @s data.sae.pending run function sae:enchant/apply_equipment
-function sae:workstation/consume_catalyst
-function sae:workstation/charge_levels
+    write_text(fn / "enchant/apply_book.mcfunction", f"""
+data modify block ~ ~ ~ Items[{{Slot:{target_slot}b}}].id set value "minecraft:enchanted_book"
+execute unless data block ~ ~ ~ Items[{{Slot:{target_slot}b}}].components."minecraft:stored_enchantments" run data modify block ~ ~ ~ Items[{{Slot:{target_slot}b}}].components."minecraft:stored_enchantments" set value {{}}
+data modify block ~ ~ ~ Items[{{Slot:{target_slot}b}}].components."minecraft:stored_enchantments" merge from entity @s data.sae.pending
+execute if data entity @s data.sae.pending."minecraft:mending" run data modify block ~ ~ ~ Items[{{Slot:{target_slot}b}}].components."minecraft:damage" set value 0
 """)
-    write_text(fn / "enchant/apply_book.mcfunction", """
-data modify block ~ ~ ~ Items[{Slot:10b}].id set value "minecraft:enchanted_book"
-execute unless data block ~ ~ ~ Items[{Slot:10b}].components."minecraft:stored_enchantments" run data modify block ~ ~ ~ Items[{Slot:10b}].components."minecraft:stored_enchantments" set value {}
-data modify block ~ ~ ~ Items[{Slot:10b}].components."minecraft:stored_enchantments" merge from entity @s data.sae.pending
-execute if data entity @s data.sae.pending."minecraft:mending" run data modify block ~ ~ ~ Items[{Slot:10b}].components."minecraft:damage" set value 0
-""")
-    write_text(fn / "enchant/apply_equipment.mcfunction", """
+    write_text(fn / "enchant/apply_equipment.mcfunction", f"""
 data modify storage sae:runtime macro.enchantment set from entity @s data.sae.enchantment
 data modify storage sae:runtime macro.next set from entity @s data.sae.next
 function sae:enchant/apply_equipment_macro with storage sae:runtime macro
-execute if data entity @s {data:{sae:{enchantment:"minecraft:mending"}}} run data modify block ~ ~ ~ Items[{Slot:10b}].components."minecraft:damage" set value 0
+execute if data entity @s {{data:{{sae:{{enchantment:"minecraft:mending"}}}}}} run data modify block ~ ~ ~ Items[{{Slot:{target_slot}b}}].components."minecraft:damage" set value 0
 """)
-    write_text(fn / "enchant/apply_equipment_macro.mcfunction", """
-execute unless data block ~ ~ ~ Items[{Slot:10b}].components."minecraft:enchantments" run data modify block ~ ~ ~ Items[{Slot:10b}].components."minecraft:enchantments" set value {}
-$data modify block ~ ~ ~ Items[{Slot:10b}].components."minecraft:enchantments"."$(enchantment)" set value $(next)
+    write_text(fn / "enchant/apply_equipment_macro.mcfunction", f"""
+execute unless data block ~ ~ ~ Items[{{Slot:{target_slot}b}}].components."minecraft:enchantments" run data modify block ~ ~ ~ Items[{{Slot:{target_slot}b}}].components."minecraft:enchantments" set value {{}}
+$data modify block ~ ~ ~ Items[{{Slot:{target_slot}b}}].components."minecraft:enchantments"."$(enchantment)" set value $(next)
 """)
-    write_text(fn / "workstation/consume_catalyst.mcfunction", """
-execute store result score #count sae.tmp run data get block ~ ~ ~ Items[{Slot:12b}].count
-scoreboard players set #consume sae.tmp 1
-execute if data entity @s {data:{sae:{enchantment:"minecraft:infinity"}}} run scoreboard players set #consume sae.tmp 64
-execute if data entity @s data.sae.pending."minecraft:infinity" run scoreboard players set #consume sae.tmp 64
-scoreboard players operation #count sae.tmp -= #consume sae.tmp
-execute if score #count sae.tmp matches ..0 run item replace block ~ ~ ~ container.12 with air
-execute if score #count sae.tmp matches 1.. store result storage sae:runtime macro.count int 1 run scoreboard players get #count sae.tmp
-execute if score #count sae.tmp matches 1.. run function sae:workstation/set_catalyst_count with storage sae:runtime macro
-""")
-    write_text(fn / "workstation/set_catalyst_count.mcfunction", "$data modify block ~ ~ ~ Items[{Slot:12b}].count set value $(count)")
     write_text(fn / "workstation/charge_levels.mcfunction", """
 execute if entity @a[tag=fancyui.button.clicker,gamemode=creative] run return 0
 execute store result storage sae:runtime macro.cost int 1 run scoreboard players get #cost sae.tmp
@@ -864,145 +1222,193 @@ function sae:workstation/charge_levels_macro with storage sae:runtime macro
 """)
     write_text(fn / "workstation/charge_levels_macro.mcfunction", "$experience add @a[tag=fancyui.button.clicker] -$(cost) levels")
 
-    # Transfer preserves the destination stack and moves the complete vanilla enchantment map.
+    # Transfer preserves the destination stack and moves the complete enchantment map.
     transfer_preview = [
-        "execute store result score #source_count sae.tmp run data get block ~ ~ ~ Items[{Slot:10b}].count",
-        "execute store result score #destination_count sae.tmp run data get block ~ ~ ~ Items[{Slot:14b}].count",
-        "execute store result score #catalyst_count sae.tmp run data get block ~ ~ ~ Items[{Slot:12b}].count",
+        "scoreboard players set #valid sae.tmp 0",
+        'data modify entity @s data.sae.transfer_reason set value "Insert exactly one source item"',
+        f"scoreboard players set #source_count sae.tmp 0",
+        f"execute store result score #source_count sae.tmp run data get block ~ ~ ~ Items[{{Slot:{target_slot}b}}].count",
         "execute unless score #source_count sae.tmp matches 1 run return 0",
+        'data modify entity @s data.sae.transfer_reason set value "Insert exactly one destination item"',
+        "scoreboard players set #destination_count sae.tmp 0",
+        f"execute store result score #destination_count sae.tmp run data get block ~ ~ ~ Items[{{Slot:{destination_slot}b}}].count",
         "execute unless score #destination_count sae.tmp matches 1 run return 0",
-        "execute unless score #catalyst_count sae.tmp matches 1.. run return 0",
-        "execute unless items block ~ ~ ~ container.12 minecraft:amethyst_block run return 0",
-        "execute if items block ~ ~ ~ container.10 minecraft:book run return 0",
-        "execute if items block ~ ~ ~ container.10 minecraft:enchanted_book run return 0",
+        'data modify entity @s data.sae.transfer_reason set value "Books cannot be transfer sources"',
+        f"execute if items block ~ ~ ~ container.{target_slot} minecraft:book run return 0",
+        f"execute if items block ~ ~ ~ container.{target_slot} minecraft:enchanted_book run return 0",
         "scoreboard players set #source_enchants sae.tmp 0",
     ]
     for enchantment in CATALYSTS:
         transfer_preview.append(
-            f'execute if data block ~ ~ ~ Items[{{Slot:10b}}].components."minecraft:enchantments"."minecraft:{enchantment}" run scoreboard players add #source_enchants sae.tmp 1'
+            f'execute if data block ~ ~ ~ Items[{{Slot:{target_slot}b}}].components."minecraft:enchantments"."minecraft:{enchantment}" run scoreboard players add #source_enchants sae.tmp 1'
         )
     transfer_preview.extend([
+        'data modify entity @s data.sae.transfer_reason set value "Source has no enchantments"',
         "execute unless score #source_enchants sae.tmp matches 1.. run return 0",
         "scoreboard players set #destination_ok sae.tmp 1",
     ])
     for enchantment in CATALYSTS:
         transfer_preview.append(
-            f'execute if data block ~ ~ ~ Items[{{Slot:14b}}].components."minecraft:enchantments"."minecraft:{enchantment}" unless items block ~ ~ ~ container.14 #sae:netherite_equipment run scoreboard players set #destination_ok sae.tmp 0'
+            f'execute if data block ~ ~ ~ Items[{{Slot:{destination_slot}b}}].components."minecraft:enchantments"."minecraft:{enchantment}" unless items block ~ ~ ~ container.{destination_slot} #sae:netherite_equipment run scoreboard players set #destination_ok sae.tmp 0'
         )
         if enchantment != "mending":
             transfer_preview.append(
-                f'execute if data block ~ ~ ~ Items[{{Slot:14b}}].components."minecraft:enchantments"."minecraft:{enchantment}" run scoreboard players set #destination_ok sae.tmp 0'
+                f'execute if data block ~ ~ ~ Items[{{Slot:{destination_slot}b}}].components."minecraft:enchantments"."minecraft:{enchantment}" run scoreboard players set #destination_ok sae.tmp 0'
             )
     transfer_preview.extend([
+        'data modify entity @s data.sae.transfer_reason set value "Destination is already enchanted"',
         "execute unless score #destination_ok sae.tmp matches 1 run return 0",
         "scoreboard players set #category_match sae.tmp 0",
-        "execute if items block ~ ~ ~ container.14 minecraft:book run scoreboard players set #category_match sae.tmp 1",
+        f"execute if items block ~ ~ ~ container.{destination_slot} minecraft:book run scoreboard players set #category_match sae.tmp 1",
     ])
     for category in CATEGORIES:
         transfer_preview.append(
-            f"execute if items block ~ ~ ~ container.10 #sae:transfer/{category} if items block ~ ~ ~ container.14 #sae:transfer/{category} run scoreboard players set #category_match sae.tmp 1"
+            f"execute if items block ~ ~ ~ container.{target_slot} #sae:transfer/{category} if items block ~ ~ ~ container.{destination_slot} #sae:transfer/{category} run scoreboard players set #category_match sae.tmp 1"
         )
     transfer_preview.extend([
+        'data modify entity @s data.sae.transfer_reason set value "Source and destination categories do not match"',
         "execute unless score #category_match sae.tmp matches 1 run return 0",
         "scoreboard players set #compatible sae.tmp 1",
-        "execute if items block ~ ~ ~ container.14 minecraft:book run function sae:transfer/preview_valid",
+        f"execute if items block ~ ~ ~ container.{destination_slot} minecraft:book run function sae:transfer/preview_valid",
     ])
     for enchantment in CATALYSTS:
         supported = load_enchantment(enchantment)["supported_items"]
         transfer_preview.append(
-            f'execute if data block ~ ~ ~ Items[{{Slot:10b}}].components."minecraft:enchantments"."minecraft:{enchantment}" unless items block ~ ~ ~ container.14 {supported} run scoreboard players set #compatible sae.tmp 0'
+            f'execute if data block ~ ~ ~ Items[{{Slot:{target_slot}b}}].components."minecraft:enchantments"."minecraft:{enchantment}" unless items block ~ ~ ~ container.{destination_slot} {supported} run scoreboard players set #compatible sae.tmp 0'
         )
-    transfer_preview.append("execute if score #compatible sae.tmp matches 1 run function sae:transfer/preview_valid")
+    transfer_preview.extend([
+        'data modify entity @s data.sae.transfer_reason set value "Destination cannot accept every enchantment"',
+        "execute if score #compatible sae.tmp matches 1 run function sae:transfer/preview_valid",
+    ])
     write_text(fn / "transfer/preview.mcfunction", "\n".join(transfer_preview))
     write_text(fn / "transfer/preview_valid.mcfunction", """
-scoreboard players set #candidates sae.tmp 1
 scoreboard players set #cost sae.tmp 5
-data modify entity @s data.sae.label set value "all enchantments"
-data modify entity @s data.sae.transfer_valid set value true
+scoreboard players set #levels sae.tmp 0
+execute as @a[tag=sae.owner] store result score #levels sae.tmp run experience query @s levels
+data modify entity @s data.sae.transfer_reason set value "Insufficient levels"
+execute unless entity @a[tag=sae.owner,gamemode=creative] if score #levels sae.tmp < #cost sae.tmp run return 0
+data modify entity @s data.sae.transfer_reason set value "Ready"
+scoreboard players set #valid sae.tmp 1
 """)
-    write_text(fn / "transfer/apply.mcfunction", """
-execute if items block ~ ~ ~ container.14 minecraft:book run function sae:transfer/apply_book
-execute unless items block ~ ~ ~ container.14 minecraft:book run function sae:transfer/apply_equipment
-item replace block ~ ~ ~ container.10 with air
-function sae:workstation/consume_transfer_catalyst
+    write_text(fn / "transfer/apply.mcfunction", f"""
+execute if items block ~ ~ ~ container.{destination_slot} minecraft:book run function sae:transfer/apply_book
+execute unless items block ~ ~ ~ container.{destination_slot} minecraft:book run function sae:transfer/apply_equipment
+scoreboard players set modified_slot fancyui.master {destination_slot}
+function fancyui:manual_placement
+item replace block ~ ~ ~ container.{target_slot} with air
+scoreboard players set modified_slot fancyui.master {target_slot}
+function fancyui:manual_removal
 function sae:workstation/charge_levels
-tellraw @a[tag=fancyui.button.clicker] {"text":"All enchantments transferred; the source item was consumed.","color":"green"}
+scoreboard players set @a[tag=fancyui.button.clicker] sae.cooldown 6
+data remove entity @s data.sae.armed
+scoreboard players set @s sae.timer 0
+playsound minecraft:block.enchantment_table.use master @a[tag=fancyui.button.clicker] ~ ~ ~ 1 1
+data modify entity @s data.sae.pending_delivery set value true
+function sae:workstation/session/snapshot
+schedule function sae:transfer/deliver 1t append
 """)
-    write_text(fn / "transfer/apply_book.mcfunction", """
-data modify block ~ ~ ~ Items[{Slot:14b}].id set value "minecraft:enchanted_book"
-data modify block ~ ~ ~ Items[{Slot:14b}].components."minecraft:stored_enchantments" set from block ~ ~ ~ Items[{Slot:10b}].components."minecraft:enchantments"
+    write_text(fn / "transfer/apply_book.mcfunction", f"""
+data modify block ~ ~ ~ Items[{{Slot:{destination_slot}b}}].id set value "minecraft:enchanted_book"
+data modify block ~ ~ ~ Items[{{Slot:{destination_slot}b}}].components."minecraft:stored_enchantments" set from block ~ ~ ~ Items[{{Slot:{target_slot}b}}].components."minecraft:enchantments"
 """)
-    write_text(fn / "transfer/apply_equipment.mcfunction", """
-execute unless data block ~ ~ ~ Items[{Slot:14b}].components."minecraft:enchantments" run data modify block ~ ~ ~ Items[{Slot:14b}].components."minecraft:enchantments" set value {}
-data modify block ~ ~ ~ Items[{Slot:14b}].components."minecraft:enchantments" merge from block ~ ~ ~ Items[{Slot:10b}].components."minecraft:enchantments"
-execute if data block ~ ~ ~ Items[{Slot:14b}].components."minecraft:enchantments"."minecraft:mending" run data modify block ~ ~ ~ Items[{Slot:14b}].components."minecraft:damage" set value 0
-""")
-    write_text(fn / "workstation/consume_transfer_catalyst.mcfunction", """
-execute store result score #count sae.tmp run data get block ~ ~ ~ Items[{Slot:12b}].count
-scoreboard players remove #count sae.tmp 1
-execute if score #count sae.tmp matches ..0 run item replace block ~ ~ ~ container.12 with air
-execute if score #count sae.tmp matches 1.. store result storage sae:runtime macro.count int 1 run scoreboard players get #count sae.tmp
-execute if score #count sae.tmp matches 1.. run function sae:workstation/set_catalyst_count with storage sae:runtime macro
+    write_text(fn / "transfer/apply_equipment.mcfunction", f"""
+execute unless data block ~ ~ ~ Items[{{Slot:{destination_slot}b}}].components."minecraft:enchantments" run data modify block ~ ~ ~ Items[{{Slot:{destination_slot}b}}].components."minecraft:enchantments" set value {{}}
+data modify block ~ ~ ~ Items[{{Slot:{destination_slot}b}}].components."minecraft:enchantments" merge from block ~ ~ ~ Items[{{Slot:{target_slot}b}}].components."minecraft:enchantments"
+execute if data block ~ ~ ~ Items[{{Slot:{destination_slot}b}}].components."minecraft:enchantments"."minecraft:mending" run data modify block ~ ~ ~ Items[{{Slot:{destination_slot}b}}].components."minecraft:damage" set value 0
 """)
 
-    # Reference pages reuse the nine fixed button slots; they are informational controls.
-    pages_by_category: dict[str, list[list[str]]] = {}
-    for category in ["Armor", "Melee", "Ranged", "Tools", "Movement and water", "Curses"]:
-        names = [name for name, (_, _, group) in CATALYSTS.items() if group == category]
-        pages_by_category[category] = [names[i:i + 9] for i in range(0, len(names), 9)] or [[]]
-
-    reference_dispatch: list[str] = []
-    for category, pages in pages_by_category.items():
-        for page_index, enchantments in enumerate(pages):
-            function_name = category.lower().replace(" ", "_")
-            reference_dispatch.append(
-                f'execute if data entity @s {{data:{{sae:{{category:"{category}",page:{page_index}}}}}}} run function sae:workstation/reference/{function_name}_{page_index}'
-            )
-            lines: list[str] = []
-            for offset in range(9):
-                slot = 18 + offset
-                if offset < len(enchantments):
-                    enchantment = enchantments[offset]
-                    catalyst, required, _ = CATALYSTS[enchantment]
-                    name = display_names[enchantment]
-                    catalyst_name = catalyst.replace("_", " ").title()
-                    lines.extend([
-                        f'data modify block ~ ~ ~ Items[{{Slot:{slot}b}}].id set value "minecraft:{catalyst}"',
-                        f'data modify block ~ ~ ~ Items[{{Slot:{slot}b}}].components."minecraft:custom_name" set value {{text:"{name}",color:"aqua",italic:false}}',
-                        f'data modify block ~ ~ ~ Items[{{Slot:{slot}b}}].components."minecraft:lore" set value [{{text:"{required} × {catalyst_name} per tier",color:"gray",italic:false}}]',
-                        f'data modify block ~ ~ ~ Items[{{Slot:{slot}b}}].components."minecraft:custom_data".sae.enchantment set value "minecraft:{enchantment}"',
-                    ])
-                else:
-                    lines.extend([
-                        f'data modify block ~ ~ ~ Items[{{Slot:{slot}b}}].id set value "minecraft:gray_stained_glass_pane"',
-                        f'data modify block ~ ~ ~ Items[{{Slot:{slot}b}}].components."minecraft:custom_name" set value {{text:" ",italic:false}}',
-                        f'data remove block ~ ~ ~ Items[{{Slot:{slot}b}}].components."minecraft:lore"',
-                        f'data remove block ~ ~ ~ Items[{{Slot:{slot}b}}].components."minecraft:custom_data".sae.enchantment',
-                    ])
-            write_text(fn / f"workstation/reference/{function_name}_{page_index}.mcfunction", "\n".join(lines))
-    # Clamp page when changing to a category with fewer pages.
-    reference_dispatch.append("execute unless data entity @s data.sae.category run data modify entity @s data.sae.category set value \"Armor\"")
-    reference_dispatch.append("execute unless data entity @s data.sae.page run data modify entity @s data.sae.page set value 0")
-    reference_dispatch.append("function sae:workstation/reference/filter")
-    write_text(fn / "workstation/reference/render.mcfunction", "\n".join(reference_dispatch))
-
-    filter_lines = [
-        "execute unless data block ~ ~ ~ Items[{Slot:10b}] run return 0",
-        "execute if items block ~ ~ ~ container.10 minecraft:book run return 0",
-        "execute if items block ~ ~ ~ container.10 minecraft:enchanted_book run return 0",
+    transfer_preview_lines = [
+        f'data modify block ~ ~ ~ Items[{{Slot:{transfer_preview_slot}b}}].components."minecraft:item_model" set from block ~ ~ ~ Items[{{Slot:{destination_slot}b}}].id',
+        f'execute if items block ~ ~ ~ container.{destination_slot} minecraft:book run data modify block ~ ~ ~ Items[{{Slot:{transfer_preview_slot}b}}].components."minecraft:item_model" set value "minecraft:enchanted_book"',
+        f'execute if data block ~ ~ ~ Items[{{Slot:{destination_slot}b}}].components."minecraft:item_model" run data modify block ~ ~ ~ Items[{{Slot:{transfer_preview_slot}b}}].components."minecraft:item_model" set from block ~ ~ ~ Items[{{Slot:{destination_slot}b}}].components."minecraft:item_model"',
+        f'data modify block ~ ~ ~ Items[{{Slot:{transfer_preview_slot}b}}].components."minecraft:custom_name" set value {{text:"Transfer result",color:"aqua",italic:false}}',
+        f'execute if data block ~ ~ ~ Items[{{Slot:{destination_slot}b}}].components."minecraft:custom_name" run data modify block ~ ~ ~ Items[{{Slot:{transfer_preview_slot}b}}].components."minecraft:custom_name" set from block ~ ~ ~ Items[{{Slot:{destination_slot}b}}].components."minecraft:custom_name"',
+        f'data modify block ~ ~ ~ Items[{{Slot:{transfer_preview_slot}b}}].components."minecraft:lore" set value []',
+        f'data modify block ~ ~ ~ Items[{{Slot:{transfer_preview_slot}b}}].components."minecraft:enchantments" set from block ~ ~ ~ Items[{{Slot:{target_slot}b}}].components."minecraft:enchantments"',
+        f'execute if data block ~ ~ ~ Items[{{Slot:{destination_slot}b}}].components."minecraft:enchantments" run data modify block ~ ~ ~ Items[{{Slot:{transfer_preview_slot}b}}].components."minecraft:enchantments" merge from block ~ ~ ~ Items[{{Slot:{destination_slot}b}}].components."minecraft:enchantments"',
+        f'data modify block ~ ~ ~ Items[{{Slot:{transfer_preview_slot}b}}].components."minecraft:enchantment_glint_override" set value true',
+        f'execute if data block ~ ~ ~ Items[{{Slot:{destination_slot}b}}].components."minecraft:enchantment_glint_override" run data modify block ~ ~ ~ Items[{{Slot:{transfer_preview_slot}b}}].components."minecraft:enchantment_glint_override" set from block ~ ~ ~ Items[{{Slot:{destination_slot}b}}].components."minecraft:enchantment_glint_override"',
+        f'execute if items block ~ ~ ~ container.{destination_slot} minecraft:book run function sae:transfer/render_preview_book',
+        f'data modify block ~ ~ ~ Items[{{Slot:{transfer_preview_slot}b}}].components."minecraft:custom_data".sae set value {{action:"transfer_take"}}',
     ]
-    for slot in range(18, 27):
-        for enchantment in CATALYSTS:
-            supported = load_enchantment(enchantment)["supported_items"]
-            filter_lines.append(
-                f'execute if data block ~ ~ ~ Items[{{Slot:{slot}b}}].components."minecraft:custom_data".sae{{enchantment:"minecraft:{enchantment}"}} unless items block ~ ~ ~ container.10 {supported} run function sae:workstation/reference/hide_{slot}'
-            )
-        write_text(fn / f"workstation/reference/hide_{slot}.mcfunction", f"""
-data modify block ~ ~ ~ Items[{{Slot:{slot}b}}].id set value "minecraft:gray_stained_glass_pane"
-data modify block ~ ~ ~ Items[{{Slot:{slot}b}}].components."minecraft:custom_name" set value {{text:"Not compatible",color:"dark_gray",italic:false}}
-data modify block ~ ~ ~ Items[{{Slot:{slot}b}}].components."minecraft:lore" set value [{{text:"This recipe does not apply to the inserted item",color:"gray",italic:false}}]
+    write_text(fn / "transfer/render_preview_book.mcfunction", f"""
+data remove block ~ ~ ~ Items[{{Slot:{transfer_preview_slot}b}}].components."minecraft:enchantments"
+data modify block ~ ~ ~ Items[{{Slot:{transfer_preview_slot}b}}].components."minecraft:stored_enchantments" set from block ~ ~ ~ Items[{{Slot:{target_slot}b}}].components."minecraft:enchantments"
 """)
-    write_text(fn / "workstation/reference/filter.mcfunction", "\n".join(filter_lines))
+    transfer_preview_lines.extend([
+        f'data modify block ~ ~ ~ Items[{{Slot:{transfer_preview_slot}b}}].components."minecraft:lore" append value {{text:"Source will be destroyed",color:"red",italic:false}}',
+        f'data modify block ~ ~ ~ Items[{{Slot:{transfer_preview_slot}b}}].components."minecraft:lore" append value {{text:"Cost: 5 levels",color:"gray",italic:false}}',
+    ])
+    write_text(fn / "transfer/render_preview.mcfunction", "\n".join(transfer_preview_lines))
+
+    transfer_reason_names = {
+        "Insert exactly one source item": "Insert one source item",
+        "Insert exactly one destination item": "Insert one destination item",
+        "Books cannot be transfer sources": "Books cannot be sources",
+        "Source has no enchantments": "Source has no enchantments",
+        "Destination is already enchanted": "Destination already enchanted",
+        "Source and destination categories do not match": "Item categories do not match",
+        "Destination cannot accept every enchantment": "Destination is incompatible",
+        "Insufficient levels": "Insufficient levels",
+    }
+    reason_dispatch = []
+    for index, (reason, name) in enumerate(transfer_reason_names.items()):
+        reason_dispatch.append(
+            f'execute if data entity @s data.sae{{transfer_reason:"{reason}"}} run function sae:transfer/control/reason_{index}'
+        )
+        write_text(fn / f"transfer/control/reason_{index}.mcfunction", f'data modify block ~ ~ ~ Items[{{Slot:{transfer_preview_slot}b}}].components."minecraft:custom_name" set value {{text:"{name}",color:"red",italic:false}}')
+    write_text(fn / "transfer/control/reason.mcfunction", "\n".join(reason_dispatch))
+
+    write_text(fn / "transfer/render.mcfunction", f"""
+function sae:workstation/destination_guard/hide
+data modify block ~ ~ ~ Items[{{Slot:0b}}].components."minecraft:item_model" set value "minecraft:gray_stained_glass_pane"
+data modify block ~ ~ ~ Items[{{Slot:0b}}].components."minecraft:custom_name" set value {{text:" ",italic:false}}
+data remove block ~ ~ ~ Items[{{Slot:0b}}].components."minecraft:lore"
+data modify block ~ ~ ~ Items[{{Slot:1b}}].components."minecraft:item_model" set value "minecraft:enchanted_book"
+data modify block ~ ~ ~ Items[{{Slot:1b}}].components."minecraft:custom_name" set value {{text:"Source",color:"white",italic:false}}
+data remove block ~ ~ ~ Items[{{Slot:1b}}].components."minecraft:lore"
+data modify block ~ ~ ~ Items[{{Slot:2b}}].components."minecraft:item_model" set value "minecraft:chest"
+data modify block ~ ~ ~ Items[{{Slot:2b}}].components."minecraft:custom_name" set value {{text:"Transfer item",color:"white",italic:false}}
+data remove block ~ ~ ~ Items[{{Slot:2b}}].components."minecraft:lore"
+data modify block ~ ~ ~ Items[{{Slot:4b}}].components."minecraft:item_model" set value "minecraft:enchanted_book"
+data modify block ~ ~ ~ Items[{{Slot:4b}}].components."minecraft:custom_name" set value {{text:"Result",color:"white",italic:false}}
+data remove block ~ ~ ~ Items[{{Slot:4b}}].components."minecraft:lore"
+data modify block ~ ~ ~ Items[{{Slot:9b}}].components."minecraft:item_model" set value "minecraft:gray_stained_glass_pane"
+data modify block ~ ~ ~ Items[{{Slot:9b}}].components."minecraft:custom_name" set value {{text:" ",italic:false}}
+data remove block ~ ~ ~ Items[{{Slot:9b}}].components."minecraft:lore"
+data modify block ~ ~ ~ Items[{{Slot:12b}}].components."minecraft:item_model" set value "minecraft:arrow"
+data modify block ~ ~ ~ Items[{{Slot:12b}}].components."minecraft:custom_name" set value {{text:"Creates",color:"gray",italic:false}}
+data remove block ~ ~ ~ Items[{{Slot:12b}}].components."minecraft:lore"
+data modify block ~ ~ ~ Items[{{Slot:{transfer_mode_slot}b}}].components."minecraft:item_model" set value "minecraft:enchanting_table"
+data modify block ~ ~ ~ Items[{{Slot:{transfer_mode_slot}b}}].components."minecraft:custom_name" set value {{text:"Switch to Enchant",color:"white",italic:false}}
+data modify block ~ ~ ~ Items[{{Slot:{transfer_mode_slot}b}}].components."minecraft:lore" set value [{{text:"Return to item-first enchanting",color:"gray",italic:false}}]
+data modify block ~ ~ ~ Items[{{Slot:{transfer_mode_slot}b}}].components."minecraft:custom_data".sae set value {{action:"mode_toggle"}}
+execute if data block ~ ~ ~ Items[{{Slot:{destination_slot}b}}] run data modify block ~ ~ ~ Items[{{Slot:{transfer_mode_slot}b}}].components."minecraft:item_model" set value "minecraft:barrier"
+execute if data block ~ ~ ~ Items[{{Slot:{destination_slot}b}}] run data modify block ~ ~ ~ Items[{{Slot:{transfer_mode_slot}b}}].components."minecraft:lore" set value [{{text:"Remove the destination before switching",color:"red",italic:false}}]
+function sae:workstation/options/clear_page_control
+function sae:workstation/options/clear_transfer_control
+data modify block ~ ~ ~ Items[{{Slot:{transfer_preview_slot}b}}].components."minecraft:item_model" set value "minecraft:gray_stained_glass_pane"
+data modify block ~ ~ ~ Items[{{Slot:{transfer_preview_slot}b}}].components."minecraft:custom_name" set value {{text:"Awaiting valid inputs",color:"dark_gray",italic:false}}
+data remove block ~ ~ ~ Items[{{Slot:{transfer_preview_slot}b}}].components."minecraft:lore"
+data remove block ~ ~ ~ Items[{{Slot:{transfer_preview_slot}b}}].components."minecraft:enchantments"
+data remove block ~ ~ ~ Items[{{Slot:{transfer_preview_slot}b}}].components."minecraft:stored_enchantments"
+data remove block ~ ~ ~ Items[{{Slot:{transfer_preview_slot}b}}].components."minecraft:enchantment_glint_override"
+data modify block ~ ~ ~ Items[{{Slot:{transfer_preview_slot}b}}].components."minecraft:custom_data".sae set value {{action:"empty"}}
+function sae:transfer/preview
+execute if score #valid sae.tmp matches 1 if data block ~ ~ ~ Items[{{Slot:{target_slot}b}}] if data block ~ ~ ~ Items[{{Slot:{destination_slot}b}}] run function sae:transfer/render_preview
+execute unless score #valid sae.tmp matches 1 run function sae:transfer/control/reason
+""")
+    write_text(fn / "workstation/transfer_take.mcfunction", """
+function sae:workstation/control/check_owner
+execute unless score #actor_ok sae.tmp matches 1 run return 0
+execute if entity @a[tag=fancyui.button.clicker,scores={sae.cooldown=1..}] run return run playsound minecraft:block.note_block.bass master @a[tag=fancyui.button.clicker] ~ ~ ~ 0.6 0.7
+tag @a remove sae.owner
+tag @a[tag=fancyui.button.clicker] add sae.owner
+function sae:transfer/preview
+tag @a remove sae.owner
+execute unless score #valid sae.tmp matches 1 run return run playsound minecraft:block.note_block.bass master @a[tag=fancyui.button.clicker] ~ ~ ~ 0.6 0.7
+function sae:transfer/apply
+""")
 
     write_json(DATA / "minecraft/tags/function/load.json", {"values": ["sae:load"]})
     write_json(DATA / "minecraft/tags/function/tick.json", {"values": ["sae:tick"]})
