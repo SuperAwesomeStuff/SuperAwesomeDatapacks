@@ -91,7 +91,7 @@
                   "enchantments": {
                     "minecraft:sharpness": 5
                   },
-                  "add": true
+                  "add": false
                 }
               },
               {
@@ -110,7 +110,7 @@
                   "enchantments": {
                     "minecraft:smite": 5
                   },
-                  "add": true
+                  "add": false
                 }
               },
               {
@@ -129,7 +129,7 @@
                   "enchantments": {
                     "minecraft:bane_of_arthropods": 5
                   },
-                  "add": true
+                  "add": false
                 }
               },
               {
@@ -148,7 +148,7 @@
                   "enchantments": {
                     "minecraft:protection": 4
                   },
-                  "add": true
+                  "add": false
                 }
               },
               {
@@ -167,7 +167,7 @@
                   "enchantments": {
                     "minecraft:unbreaking": 3
                   },
-                  "add": true
+                  "add": false
                 }
               }
             ]

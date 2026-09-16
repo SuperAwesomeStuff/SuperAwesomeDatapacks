@@ -42,7 +42,7 @@
                   "enchantments": {
                     "minecraft:efficiency": 5
                   },
-                  "add": true
+                  "add": false
                 }
               },
               {
@@ -61,7 +61,7 @@
                   "enchantments": {
                     "minecraft:fortune": 3
                   },
-                  "add": true
+                  "add": false
                 }
               },
               {
@@ -80,7 +80,7 @@
                   "enchantments": {
                     "minecraft:silk_touch": 1
                   },
-                  "add": true
+                  "add": false
                 }
               },
               {
@@ -99,7 +99,7 @@
                   "enchantments": {
                     "minecraft:unbreaking": 3
                   },
-                  "add": true
+                  "add": false
                 }
               },
               {
@@ -118,7 +118,7 @@
                   "enchantments": {
                     "minecraft:feather_falling": 4
                   },
-                  "add": true
+                  "add": false
                 }
               }
             ]

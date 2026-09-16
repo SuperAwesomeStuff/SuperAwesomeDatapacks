@@ -149,7 +149,7 @@
                   "enchantments": {
                     "minecraft:bane_of_arthropods": 5
                   },
-                  "add": true
+                  "add": false
                 }
               },
               {
@@ -168,7 +168,7 @@
                   "enchantments": {
                     "minecraft:infinity": 1
                   },
-                  "add": true
+                  "add": false
                 }
               },
               {
@@ -187,7 +187,7 @@
                   "enchantments": {
                     "minecraft:punch": 2
                   },
-                  "add": true
+                  "add": false
                 }
               },
               {
@@ -206,7 +206,7 @@
                   "enchantments": {
                     "minecraft:projectile_protection": 4
                   },
-                  "add": true
+                  "add": false
                 }
               },
               {
@@ -225,7 +225,7 @@
                   "enchantments": {
                     "minecraft:unbreaking": 3
                   },
-                  "add": true
+                  "add": false
                 }
               }
             ]

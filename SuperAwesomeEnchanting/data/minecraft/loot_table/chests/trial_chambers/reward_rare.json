@@ -123,7 +123,7 @@
                   "enchantments": {
                     "minecraft:sharpness": 5
                   },
-                  "add": true
+                  "add": false
                 }
               },
               {
@@ -142,7 +142,7 @@
                   "enchantments": {
                     "minecraft:bane_of_arthropods": 5
                   },
-                  "add": true
+                  "add": false
                 }
               },
               {
@@ -161,7 +161,7 @@
                   "enchantments": {
                     "minecraft:efficiency": 5
                   },
-                  "add": true
+                  "add": false
                 }
               },
               {
@@ -180,7 +180,7 @@
                   "enchantments": {
                     "minecraft:fortune": 3
                   },
-                  "add": true
+                  "add": false
                 }
               },
               {
@@ -199,7 +199,7 @@
                   "enchantments": {
                     "minecraft:silk_touch": 1
                   },
-                  "add": true
+                  "add": false
                 }
               },
               {
@@ -218,7 +218,7 @@
                   "enchantments": {
                     "minecraft:feather_falling": 4
                   },
-                  "add": true
+                  "add": false
                 }
               }
             ]
@@ -251,7 +251,7 @@
                   "enchantments": {
                     "minecraft:riptide": 3
                   },
-                  "add": true
+                  "add": false
                 }
               },
               {
@@ -270,7 +270,7 @@
                   "enchantments": {
                     "minecraft:loyalty": 3
                   },
-                  "add": true
+                  "add": false
                 }
               },
               {
@@ -289,7 +289,7 @@
                   "enchantments": {
                     "minecraft:channeling": 1
                   },
-                  "add": true
+                  "add": false
                 }
               },
               {
@@ -308,7 +308,7 @@
                   "enchantments": {
                     "minecraft:impaling": 5
                   },
-                  "add": true
+                  "add": false
                 }
               },
               {
@@ -327,7 +327,7 @@
                   "enchantments": {
                     "minecraft:aqua_affinity": 1
                   },
-                  "add": true
+                  "add": false
                 }
               }
             ]

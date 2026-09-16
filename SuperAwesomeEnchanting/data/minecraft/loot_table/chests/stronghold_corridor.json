@@ -178,7 +178,7 @@
                   "enchantments": {
                     "minecraft:protection": 4
                   },
-                  "add": true
+                  "add": false
                 }
               },
               {
@@ -197,7 +197,7 @@
                   "enchantments": {
                     "minecraft:projectile_protection": 4
                   },
-                  "add": true
+                  "add": false
                 }
               },
               {
@@ -216,7 +216,7 @@
                   "enchantments": {
                     "minecraft:sharpness": 5
                   },
-                  "add": true
+                  "add": false
                 }
               },
               {
@@ -235,7 +235,7 @@
                   "enchantments": {
                     "minecraft:efficiency": 5
                   },
-                  "add": true
+                  "add": false
                 }
               },
               {
@@ -254,7 +254,7 @@
                   "enchantments": {
                     "minecraft:fortune": 3
                   },
-                  "add": true
+                  "add": false
                 }
               },
               {
@@ -273,7 +273,7 @@
                   "enchantments": {
                     "minecraft:unbreaking": 3
                   },
-                  "add": true
+                  "add": false
                 }
               }
             ]
