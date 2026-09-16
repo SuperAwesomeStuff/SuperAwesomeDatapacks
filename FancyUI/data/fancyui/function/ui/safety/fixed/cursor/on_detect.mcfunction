@@ -15,6 +15,4 @@ execute if items entity @s player.cursor *[custom_data~{fancyui:{button:true}}] 
 
 function fancyui:ui/safety/fixed/cursor/replace_fixed
 
-item replace entity @s player.cursor with minecraft:air
-
 tag @s remove fancyui.cursor.instigator

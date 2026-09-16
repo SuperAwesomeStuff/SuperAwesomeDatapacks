@@ -9,7 +9,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 PACK = ROOT / "SuperAwesomeEnchanting"
 DATA = PACK / "data"
-VANILLA = ROOT / ".cache/minecraft/26.3-rc2/vanilla/data/minecraft"
+VANILLA = ROOT / ".cache/minecraft/26.3/vanilla/data/minecraft"
 FANCYUI = ROOT / "FancyUI"
 
 
@@ -164,11 +164,11 @@ def install_enchantments() -> dict[str, int]:
         write_json(out / src.name, value)
 
     tags = DATA / "minecraft/tags/enchantment"
-    write_json(tags / "exclusive_set/bow.json", {"values": ["minecraft:infinity"]})
+    write_json(tags / "exclusive_set/bow.json", {"replace": True, "values": ["minecraft:infinity"]})
     random_values = ["#minecraft:non_treasure", "minecraft:binding_curse", "minecraft:vanishing_curse", "minecraft:frost_walker"]
-    write_json(tags / "on_random_loot.json", {"values": random_values})
-    write_json(tags / "tradeable.json", {"values": random_values})
-    write_json(tags / "treasure.json", {"values": ["minecraft:binding_curse", "minecraft:vanishing_curse", "minecraft:swift_sneak", "minecraft:soul_speed", "minecraft:frost_walker", "minecraft:wind_burst"]})
+    write_json(tags / "on_random_loot.json", {"replace": True, "values": random_values})
+    write_json(tags / "tradeable.json", {"replace": True, "values": random_values})
+    write_json(tags / "treasure.json", {"replace": True, "values": ["minecraft:binding_curse", "minecraft:vanishing_curse", "minecraft:swift_sneak", "minecraft:soul_speed", "minecraft:frost_walker", "minecraft:wind_burst"]})
     return maximums
 
 
@@ -304,8 +304,8 @@ scoreboard objectives add sae.vanilla trigger
 scoreboard players set #clock sae.clock 0
 scoreboard players set #dependency_notice sae.tmp 0
 execute unless data storage sae:registry next_id run data modify storage sae:registry next_id set value 0
-data modify storage sae:catalog version set value "26.3-rc-2"
-tellraw @a [{"text":"[Super Awesome Enchanting] ","color":"dark_aqua","bold":true},{"text":"Loaded for Java 26.3 RC2","color":"aqua"}]
+data modify storage sae:catalog version set value "26.3"
+tellraw @a [{"text":"[Super Awesome Enchanting] ","color":"dark_aqua","bold":true},{"text":"Loaded for Java 26.3","color":"aqua"}]
 """)
     write_text(fn / "tick.mcfunction", """
 scoreboard players add #clock sae.clock 1
@@ -364,6 +364,7 @@ function sae:workstation/uninstall_one
         button(20, "gray_stained_glass_pane", " ", "empty"),
     ]
     slots.extend(button(slot, "gray_stained_glass_pane", " ", "empty") for slot in option_slots)
+    fixed_slots = tuple(slot for slot in range(27) if slot not in {target_slot, destination_slot})
     slot_snbt = ",".join(slots)
     create = f"""
 scoreboard players set #found sae.tmp 1
@@ -390,6 +391,7 @@ execute as @e[type=hopper_minecart,distance=..2] run data modify entity @s Enabl
 execute if entity @s[tag=sae.session] run function sae:workstation/session/check_owner
 execute if score @s sae.timer matches 1.. run scoreboard players remove @s sae.timer 1
 execute if score @s sae.timer matches 0 run data remove entity @s data.sae.armed
+execute if data entity @s data.sae.render_pending run function sae:workstation/render
 execute if entity @s[tag=sae.session] if score #clock sae.clock matches 0 run function sae:workstation/render
 execute if entity @s[tag=sae.session] if score #clock sae.clock matches 10 run function sae:workstation/render
 """)
@@ -534,7 +536,14 @@ data remove entity @s data.sae.armed
 scoreboard players set @s sae.timer 0
 """)
 
-    write_text(fn / "workstation/render.mcfunction", """
+    fixed_slot_guards = "\n".join(
+        f'execute unless items block ~ ~ ~ container.{slot} *[minecraft:custom_data~{{fancyui:{{fixed:true}}}}] run data modify entity @s data.sae.render_pending set value true'
+        for slot in fixed_slots
+    )
+    write_text(fn / "workstation/render.mcfunction", f"""
+data remove entity @s data.sae.render_pending
+{fixed_slot_guards}
+execute if data entity @s data.sae.render_pending run return 0
 function sae:workstation/session/tag_owner
 function sae:workstation/options/render
 tag @a remove sae.owner

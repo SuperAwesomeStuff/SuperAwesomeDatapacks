@@ -11,8 +11,8 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 PACK = ROOT / "SuperAwesomeEnchanting"
 DATA = PACK / "data"
-VANILLA = ROOT / ".cache/minecraft/26.3-rc2/vanilla/data/minecraft"
-REGISTRIES = ROOT / ".cache/minecraft/26.3-rc2/reports/reports/registries.json"
+VANILLA = ROOT / ".cache/minecraft/26.3/vanilla/data/minecraft"
+REGISTRIES = ROOT / ".cache/minecraft/26.3/reports/reports/registries.json"
 GENERATOR = ROOT / "tools/generate_enchanting_pack.py"
 FANCYUI = ROOT / "FancyUI"
 
@@ -115,9 +115,18 @@ def main() -> int:
         errors.append("automatic Unbreakable maintenance increments its level instead of setting level I")
 
     for tag_name in ("on_random_loot", "tradeable", "treasure"):
-        values = json.loads((DATA / f"minecraft/tags/enchantment/{tag_name}.json").read_text(encoding="utf-8"))["values"]
+        tag = json.loads((DATA / f"minecraft/tags/enchantment/{tag_name}.json").read_text(encoding="utf-8"))
+        values = tag["values"]
+        if tag.get("replace") is not True:
+            errors.append(f"#{tag_name} merges with vanilla instead of replacing it")
         if "minecraft:mending" in values:
             errors.append(f"Unbreakable remains directly obtainable through #{tag_name}")
+
+    bow_exclusions = json.loads(
+        (DATA / "minecraft/tags/enchantment/exclusive_set/bow.json").read_text(encoding="utf-8")
+    )
+    if bow_exclusions.get("replace") is not True:
+        errors.append("#exclusive_set/bow merges with vanilla instead of allowing Infinity with Unbreakable")
 
     # Client-facing UI regressions. These checks deliberately inspect the generated
     # commands at the same seam Minecraft reads, rather than trusting the generator.
@@ -234,9 +243,12 @@ def main() -> int:
         button_ui = (FANCYUI / "data/fancyui/function/ui/init/slot/append_button.mcfunction").read_text(encoding="utf-8")
         background_ui = (FANCYUI / "data/fancyui/function/ui/init/slot/append_background.mcfunction").read_text(encoding="utf-8")
         safety_tick = (FANCYUI / "data/fancyui/function/ui/safety/tick.mcfunction").read_text(encoding="utf-8")
+        cursor_detect = (FANCYUI / "data/fancyui/function/ui/safety/fixed/cursor/on_detect.mcfunction").read_text(encoding="utf-8")
+        cursor_recovery = (FANCYUI / "data/fancyui/function/ui/safety/fixed/cursor/replace_fixed.mcfunction").read_text(encoding="utf-8")
         inventory_recovery = (FANCYUI / "data/fancyui/function/ui/safety/fixed/inventory/on_detect.mcfunction").read_text(encoding="utf-8")
         received = json.loads((FANCYUI / "data/fancyui/advancement/ui/safety/fixed/received.json").read_text(encoding="utf-8"))
         received_item = received["criteria"]["fancyui.fixed.received"]["conditions"]["items"][0]
+        migrate = (FANCYUI / "data/fancyui/function/meta/migrate.mcfunction").read_text(encoding="utf-8")
         if "hide_tooltip:true" in button_ui:
             errors.append("FancyUI buttons still suppress their hover text")
         if "fancyui:item" in button_ui or '"minecraft:item_model"' in button_ui + background_ui:
@@ -245,6 +257,17 @@ def main() -> int:
             errors.append("FancyUI dependency does not use the vanilla no-resource-pack controls")
         if "#fancyui:ui_placeholders" in safety_tick + inventory_recovery or "items" in received_item:
             errors.append("FancyUI fixed-item recovery is still limited to a hard-coded item tag")
+        cursor_clear = "item replace entity @s player.cursor with minecraft:air"
+        restore_fixed = "run function fancyui:ui/safety/fixed/set_as_fixed"
+        if (
+            cursor_clear not in cursor_recovery
+            or restore_fixed not in cursor_recovery
+            or cursor_recovery.index(cursor_clear) > cursor_recovery.index(restore_fixed)
+            or cursor_clear in cursor_detect
+        ):
+            errors.append("FancyUI cursor recovery can delete or visually overwrite the item displaced by a fixed control")
+        if "scoreboard players add version fancyui.master 0" not in migrate:
+            errors.append("FancyUI does not initialize its version score on a fresh world")
 
     if errors:
         print("Validation failed:")

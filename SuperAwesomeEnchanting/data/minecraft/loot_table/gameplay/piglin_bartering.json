@@ -28,7 +28,7 @@
                   "enchantments": {
                     "minecraft:soul_speed": 3
                   },
-                  "add": false
+                  "add": true
                 }
               }
             ]

@@ -68,7 +68,7 @@
                   "enchantments": {
                     "minecraft:protection": 4
                   },
-                  "add": false
+                  "add": true
                 }
               },
               {
@@ -87,7 +87,7 @@
                   "enchantments": {
                     "minecraft:projectile_protection": 4
                   },
-                  "add": false
+                  "add": true
                 }
               },
               {
@@ -106,7 +106,7 @@
                   "enchantments": {
                     "minecraft:thorns": 3
                   },
-                  "add": false
+                  "add": true
                 }
               },
               {
@@ -125,7 +125,7 @@
                   "enchantments": {
                     "minecraft:sharpness": 5
                   },
-                  "add": false
+                  "add": true
                 }
               },
               {
@@ -144,7 +144,7 @@
                   "enchantments": {
                     "minecraft:smite": 5
                   },
-                  "add": false
+                  "add": true
                 }
               },
               {
@@ -163,7 +163,7 @@
                   "enchantments": {
                     "minecraft:bane_of_arthropods": 5
                   },
-                  "add": false
+                  "add": true
                 }
               },
               {
@@ -182,7 +182,7 @@
                   "enchantments": {
                     "minecraft:looting": 3
                   },
-                  "add": false
+                  "add": true
                 }
               },
               {
@@ -201,7 +201,7 @@
                   "enchantments": {
                     "minecraft:unbreaking": 3
                   },
-                  "add": false
+                  "add": true
                 }
               }
             ]

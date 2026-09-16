@@ -219,7 +219,7 @@ python tools/generate_enchanting_pack.py
 python tools/validate_enchanting_pack.py
 ```
 
-The optional `tools/test_enchanting_server.py` smoke suite uses the ignored disposable server under `.cache/minecraft/26.3-rc2/integration-server`. It requires the server EULA to have been accepted explicitly. The script installs both datapacks into its test world. It verifies pack loading, UI text and tooltip data, watched-slot acceptance, equipment enchanting, shared-catalyst Books, transfer into Netherite, Unbreakable maintenance, nearby workstation conversion, themed loot execution, and registry-based uninstall restoration.
+The optional `tools/test_enchanting_server.py` smoke suite uses the ignored disposable server under `.cache/minecraft/26.3/integration-server`. It requires the server EULA to have been accepted explicitly. The script installs both datapacks into its test world. It verifies pack loading, UI text and tooltip data, watched-slot acceptance, equipment enchanting, shared-catalyst Books, transfer into Netherite, Unbreakable maintenance, nearby workstation conversion, themed loot execution, and registry-based uninstall restoration.
 
 ## Open design work
 
@@ -229,7 +229,7 @@ The optional `tools/test_enchanting_server.py` smoke suite uses the ignored disp
 
 ## Sources and inspiration
 
-- [Minecraft 26.3 Release Candidate 2](https://www.minecraft.net/en-us/article/minecraft-26-3-release-candidate-2)
+- [Minecraft Java Edition 26.3](https://www.minecraft.net/en-us/article/minecraft-java-edition-26-3)
 - [Minecraft FancyUI Datapack](https://github.com/FancyPotatOS/FancyUI)
 - [Data-driven enchantment definitions introduced in Snapshot 24w18a](https://feedback.minecraft.net/hc/en-us/articles/27439564545677-Minecraft-Java-Edition-Snapshot-24w18a)
 - [Minecraft Anvil overview](https://www.minecraft.net/en-us/article/taking-inventory--anvil)

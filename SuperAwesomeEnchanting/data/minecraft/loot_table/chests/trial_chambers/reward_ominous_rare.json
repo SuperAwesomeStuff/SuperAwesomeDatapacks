@@ -85,7 +85,7 @@
                   "enchantments": {
                     "minecraft:knockback": 2
                   },
-                  "add": false
+                  "add": true
                 }
               },
               {
@@ -104,7 +104,7 @@
                   "enchantments": {
                     "minecraft:punch": 2
                   },
-                  "add": false
+                  "add": true
                 }
               },
               {
@@ -123,7 +123,7 @@
                   "enchantments": {
                     "minecraft:smite": 5
                   },
-                  "add": false
+                  "add": true
                 }
               },
               {
@@ -142,7 +142,7 @@
                   "enchantments": {
                     "minecraft:looting": 3
                   },
-                  "add": false
+                  "add": true
                 }
               },
               {
@@ -161,7 +161,7 @@
                   "enchantments": {
                     "minecraft:multishot": 1
                   },
-                  "add": false
+                  "add": true
                 }
               }
             ]
@@ -194,7 +194,7 @@
                   "enchantments": {
                     "minecraft:breach": 4
                   },
-                  "add": false
+                  "add": true
                 }
               },
               {
@@ -213,7 +213,7 @@
                   "enchantments": {
                     "minecraft:density": 5
                   },
-                  "add": false
+                  "add": true
                 }
               }
             ]

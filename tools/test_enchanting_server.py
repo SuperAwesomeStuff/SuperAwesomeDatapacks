@@ -11,7 +11,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SERVER = ROOT / ".cache/minecraft/26.3-rc2/integration-server"
+SERVER = ROOT / ".cache/minecraft/26.3/integration-server"
 WORLD = SERVER / "validation-world-3"
 PACKS = WORLD / "datapacks"
 
@@ -80,6 +80,18 @@ COMMANDS = [
     "execute in minecraft:overworld positioned 160 100 0 run function sae:workstation/place/create",
     "execute in minecraft:overworld positioned 160.5 100 -3.5 run function sae:workstation/restore_vanilla/start",
     "execute in minecraft:overworld if block 160 100 0 minecraft:enchanting_table unless entity @e[type=marker,tag=sae.workstation,x=159,y=99,z=-1,dx=2,dy=2,dz=2] unless data storage sae:registry entries[{x:160,y:100,z:0,dimension:\"minecraft:overworld\"}] run say Trigger command vanilla restore passed",
+    "execute in minecraft:overworld run forceload add 176 0",
+    "execute in minecraft:overworld positioned 176 100 0 run kill @e[type=marker,distance=..2]",
+    "execute in minecraft:overworld positioned 176 100 0 run function sae:workstation/place/create",
+    "execute in minecraft:overworld positioned 176 100 0 run tag @e[type=marker,tag=sae.workstation,distance=..2,limit=1] remove sae.workstation",
+    "execute in minecraft:overworld positioned 176 100 0 run tag @e[type=marker,tag=fancyui.container.watch,distance=..2,limit=1] remove fancyui.container.watch",
+    "item replace block 176 100 0 container.1 with minecraft:diamond",
+    "execute in minecraft:overworld positioned 176 100 0 as @e[type=marker,tag=fancyui.container,distance=..2,limit=1] at @s run function sae:workstation/render",
+    "data get block 176 100 0 Items[{Slot:1b}]",
+    'execute in minecraft:overworld if data block 176 100 0 Items[{Slot:1b,id:"minecraft:diamond"}] unless data block 176 100 0 Items[{Slot:1b}].components."minecraft:item_model" run say Fixed-slot overwrite safety passed',
+    'item replace block 176 100 0 container.1 with minecraft:stone_button[minecraft:custom_data={fancyui:{fixed:true}}]',
+    "execute in minecraft:overworld positioned 176 100 0 as @e[type=marker,tag=fancyui.container,distance=..2,limit=1] at @s run function sae:workstation/tick",
+    'execute in minecraft:overworld if data block 176 100 0 Items[{Slot:1b,id:"minecraft:stone_button",components:{"minecraft:item_model":"minecraft:enchanting_table"}}] run say Deferred fixed-slot render passed',
     "data get storage sae:registry entries",
     "function sae:uninstall/registry_start",
     "execute in minecraft:overworld if block 80 100 0 minecraft:enchanting_table run say Workstation registry restore passed",
@@ -100,6 +112,8 @@ EXPECTED_MARKERS = [
     "Grouped Book upgrade passed",
     "Unbreakable remained level one",
     "Trigger command vanilla restore passed",
+    "Fixed-slot overwrite safety passed",
+    "Deferred fixed-slot render passed",
     "Workstation registry restore passed",
 ]
 
@@ -168,11 +182,19 @@ def main() -> int:
         process.wait(timeout=20)
         return 1
 
+    # A newly created world can report "Done" before its first tick runs the
+    # minecraft:load function tag. Initialize both packs explicitly so the
+    # smoke test starts from the same state as an established server world.
+    process.stdin.write("function fancyui:meta/load\n")
+    process.stdin.write("function sae:load\n")
+    process.stdin.flush()
+    time.sleep(0.5)
+
     for command in COMMANDS:
         print(f"> {command}")
         process.stdin.write(command + "\n")
         process.stdin.flush()
-        time.sleep(0.25)
+        time.sleep(2 if "forceload add" in command else 0.25)
 
     process.stdin.write("stop\n")
     process.stdin.flush()

@@ -149,7 +149,7 @@
                   "enchantments": {
                     "minecraft:swift_sneak": 3
                   },
-                  "add": false
+                  "add": true
                 }
               }
             ]
@@ -319,7 +319,7 @@
                   "enchantments": {
                     "minecraft:efficiency": 5
                   },
-                  "add": false
+                  "add": true
                 }
               },
               {
@@ -338,7 +338,7 @@
                   "enchantments": {
                     "minecraft:silk_touch": 1
                   },
-                  "add": false
+                  "add": true
                 }
               },
               {
@@ -357,7 +357,7 @@
                   "enchantments": {
                     "minecraft:protection": 4
                   },
-                  "add": false
+                  "add": true
                 }
               },
               {
@@ -376,7 +376,7 @@
                   "enchantments": {
                     "minecraft:projectile_protection": 4
                   },
-                  "add": false
+                  "add": true
                 }
               },
               {
@@ -395,7 +395,7 @@
                   "enchantments": {
                     "minecraft:feather_falling": 4
                   },
-                  "add": false
+                  "add": true
                 }
               },
               {
@@ -414,7 +414,7 @@
                   "enchantments": {
                     "minecraft:respiration": 3
                   },
-                  "add": false
+                  "add": true
                 }
               },
               {
@@ -433,7 +433,7 @@
                   "enchantments": {
                     "minecraft:unbreaking": 3
                   },
-                  "add": false
+                  "add": true
                 }
               },
               {
@@ -452,7 +452,7 @@
                   "enchantments": {
                     "minecraft:thorns": 3
                   },
-                  "add": false
+                  "add": true
                 }
               }
             ]

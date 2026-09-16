@@ -89,7 +89,7 @@
                   "enchantments": {
                     "minecraft:aqua_affinity": 1
                   },
-                  "add": false
+                  "add": true
                 }
               },
               {
@@ -108,7 +108,7 @@
                   "enchantments": {
                     "minecraft:respiration": 3
                   },
-                  "add": false
+                  "add": true
                 }
               },
               {
@@ -127,7 +127,7 @@
                   "enchantments": {
                     "minecraft:depth_strider": 3
                   },
-                  "add": false
+                  "add": true
                 }
               },
               {
@@ -146,7 +146,7 @@
                   "enchantments": {
                     "minecraft:luck_of_the_sea": 3
                   },
-                  "add": false
+                  "add": true
                 }
               },
               {
@@ -165,7 +165,7 @@
                   "enchantments": {
                     "minecraft:lure": 3
                   },
-                  "add": false
+                  "add": true
                 }
               }
             ]
