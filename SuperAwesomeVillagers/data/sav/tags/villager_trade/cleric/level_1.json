@@ -1,0 +1,19 @@
+{
+  "values": [
+    "sav:cleric/sell_string",
+    "sav:cleric/sell_rotten_flesh",
+    "sav:cleric/sell_feather",
+    "sav:cleric/sell_flint",
+    "sav:cleric/sell_bone",
+    "sav:cleric/sell_gunpowder",
+    "sav:cleric/sell_spider_eye",
+    "sav:cleric/sell_ink_sac",
+    "sav:cleric/sell_slime_ball",
+    "sav:cleric/sell_glow_ink_sac",
+    "sav:cleric/sell_blaze_powder",
+    "sav:cleric/sell_rabbit_foot",
+    "sav:cleric/sell_phantom_membrane",
+    "sav:cleric/sell_ghast_tear",
+    "sav:cleric/sell_ender_pearl"
+  ]
+}

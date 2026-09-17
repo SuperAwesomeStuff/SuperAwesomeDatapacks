@@ -1,0 +1,10 @@
+{
+  "criteria": {
+    "won_raid": {
+      "trigger": "minecraft:hero_of_the_village"
+    }
+  },
+  "rewards": {
+    "function": "sav:raid_reward"
+  }
+}

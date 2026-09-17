@@ -1,0 +1,13 @@
+{
+  "wants": {
+    "id": "minecraft:cooked_rabbit",
+    "count": 3
+  },
+  "gives": {
+    "id": "minecraft:emerald",
+    "count": 2
+  },
+  "max_uses": 100000,
+  "xp": 0,
+  "reputation_discount": 0.0
+}

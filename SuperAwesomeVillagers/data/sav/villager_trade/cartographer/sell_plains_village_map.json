@@ -1,0 +1,32 @@
+{
+  "wants": {
+    "id": "minecraft:emerald",
+    "count": 16
+  },
+  "gives": {
+    "id": "minecraft:plains_village_map",
+    "count": 1
+  },
+  "max_uses": 100000,
+  "xp": 0,
+  "reputation_discount": 0.0,
+  "given_item_modifier": [
+    {
+      "type": "minecraft:exploration_map",
+      "decoration": "minecraft:village_plains",
+      "destination": "#minecraft:on_plains_village_maps",
+      "search_radius": 100
+    },
+    {
+      "type": "minecraft:filtered",
+      "item_filter": {
+        "predicates": {
+          "minecraft:map_id": {}
+        }
+      },
+      "on_fail": {
+        "type": "minecraft:discard"
+      }
+    }
+  ]
+}

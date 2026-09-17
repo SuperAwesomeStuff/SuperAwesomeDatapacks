@@ -1,0 +1,16 @@
+{
+  "values": [
+    "sav:cartographer/sell_jungle_pyramid_map",
+    "sav:cartographer/sell_swamp_hut_map",
+    "sav:cartographer/sell_desert_village_map",
+    "sav:cartographer/sell_plains_village_map",
+    "sav:cartographer/sell_savanna_village_map",
+    "sav:cartographer/sell_snowy_village_map",
+    "sav:cartographer/sell_taiga_village_map",
+    "sav:cartographer/sell_buried_trial_chambers_map",
+    "sav:cartographer/sell_ocean_monument_map",
+    "sav:cartographer/sell_woodland_mansion_map",
+    "sav:cartographer/sell_compass",
+    "sav:cartographer/sell_spyglass"
+  ]
+}
