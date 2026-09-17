@@ -1,0 +1,12 @@
+{
+  "values": [
+    "sav:weaponsmith/sell_copper_sword",
+    "sav:weaponsmith/sell_copper_axe",
+    "sav:weaponsmith/sell_iron_sword",
+    "sav:weaponsmith/sell_iron_axe",
+    "sav:weaponsmith/sell_golden_sword",
+    "sav:weaponsmith/sell_golden_axe",
+    "sav:weaponsmith/sell_diamond_sword",
+    "sav:weaponsmith/sell_diamond_axe"
+  ]
+}

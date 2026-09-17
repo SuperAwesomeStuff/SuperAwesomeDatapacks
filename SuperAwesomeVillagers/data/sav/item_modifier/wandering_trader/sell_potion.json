@@ -1,0 +1,9 @@
+{
+  "type": "minecraft:sequence",
+  "functions": [
+    {
+      "type": "minecraft:set_potion",
+      "id": "minecraft:long_invisibility"
+    }
+  ]
+}

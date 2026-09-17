@@ -1,11 +1,11 @@
 {
   "wants": {
     "id": "minecraft:birch_log",
-    "count": 64
+    "count": 32
   },
   "gives": {
     "id": "minecraft:emerald",
-    "count": 2
+    "count": 1
   },
   "max_uses": 100000,
   "xp": 0,

@@ -1,0 +1,21 @@
+{
+  "values": [
+    "sav:armorer/sell_shield",
+    "sav:armorer/sell_copper_helmet",
+    "sav:armorer/sell_copper_chestplate",
+    "sav:armorer/sell_copper_leggings",
+    "sav:armorer/sell_copper_boots",
+    "sav:armorer/sell_iron_helmet",
+    "sav:armorer/sell_iron_chestplate",
+    "sav:armorer/sell_iron_leggings",
+    "sav:armorer/sell_iron_boots",
+    "sav:armorer/sell_golden_helmet",
+    "sav:armorer/sell_golden_chestplate",
+    "sav:armorer/sell_golden_leggings",
+    "sav:armorer/sell_golden_boots",
+    "sav:armorer/sell_diamond_helmet",
+    "sav:armorer/sell_diamond_chestplate",
+    "sav:armorer/sell_diamond_leggings",
+    "sav:armorer/sell_diamond_boots"
+  ]
+}

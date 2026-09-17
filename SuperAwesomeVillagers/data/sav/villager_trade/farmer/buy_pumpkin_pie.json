@@ -1,11 +1,11 @@
 {
   "wants": {
     "id": "minecraft:pumpkin_pie",
-    "count": 16
+    "count": 8
   },
   "gives": {
     "id": "minecraft:emerald",
-    "count": 2
+    "count": 1
   },
   "max_uses": 100000,
   "xp": 0,

@@ -1,0 +1,127 @@
+{
+  "type": "minecraft:block",
+  "modifier": {
+    "type": "minecraft:explosion_decay"
+  },
+  "pools": [
+    {
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:potato",
+          "modifier": [
+            {
+              "type": "minecraft:set_components",
+              "condition": {
+                "type": "minecraft:entity_properties",
+                "entity": "this",
+                "predicate": {
+                  "minecraft:entity_type": "minecraft:villager"
+                }
+              },
+              "components": {
+                "minecraft:rarity": "uncommon"
+              }
+            },
+            {
+              "type": "minecraft:set_name",
+              "condition": {
+                "type": "minecraft:entity_properties",
+                "entity": "this",
+                "predicate": {
+                  "minecraft:entity_type": "minecraft:villager"
+                }
+              },
+              "target": "item_name",
+              "name": [
+                "Haram ",
+                {
+                  "translate": "item.minecraft.potato"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "rolls": 1
+    },
+    {
+      "condition": {
+        "type": "minecraft:match_block",
+        "blocks": "minecraft:potatoes",
+        "state": {
+          "age": "7"
+        }
+      },
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "modifier": [
+            {
+              "type": "minecraft:apply_bonus",
+              "enchantment": "minecraft:fortune",
+              "formula": "minecraft:binomial_with_bonus_count",
+              "parameters": {
+                "extra": 3,
+                "probability": 0.5714286
+              }
+            },
+            {
+              "type": "minecraft:set_components",
+              "condition": {
+                "type": "minecraft:entity_properties",
+                "entity": "this",
+                "predicate": {
+                  "minecraft:entity_type": "minecraft:villager"
+                }
+              },
+              "components": {
+                "minecraft:rarity": "uncommon"
+              }
+            },
+            {
+              "type": "minecraft:set_name",
+              "condition": {
+                "type": "minecraft:entity_properties",
+                "entity": "this",
+                "predicate": {
+                  "minecraft:entity_type": "minecraft:villager"
+                }
+              },
+              "target": "item_name",
+              "name": [
+                "Haram ",
+                {
+                  "translate": "item.minecraft.potato"
+                }
+              ]
+            }
+          ],
+          "name": "minecraft:potato"
+        }
+      ],
+      "rolls": 1
+    },
+    {
+      "condition": {
+        "type": "minecraft:match_block",
+        "blocks": "minecraft:potatoes",
+        "state": {
+          "age": "7"
+        }
+      },
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "condition": {
+            "type": "minecraft:random_chance",
+            "chance": 0.02
+          },
+          "name": "minecraft:poisonous_potato"
+        }
+      ],
+      "rolls": 1
+    }
+  ],
+  "random_sequence": "minecraft:blocks/potatoes"
+}

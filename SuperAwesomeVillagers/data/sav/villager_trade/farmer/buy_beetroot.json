@@ -1,11 +1,14 @@
 {
   "wants": {
     "id": "minecraft:beetroot",
-    "count": 64
+    "count": 8,
+    "components": {
+      "minecraft:rarity": "common"
+    }
   },
   "gives": {
     "id": "minecraft:emerald",
-    "count": 2
+    "count": 1
   },
   "max_uses": 100000,
   "xp": 0,

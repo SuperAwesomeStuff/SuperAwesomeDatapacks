@@ -1,11 +1,11 @@
 {
   "wants": {
     "id": "minecraft:nether_wart",
-    "count": 32
+    "count": 16
   },
   "gives": {
     "id": "minecraft:emerald",
-    "count": 2
+    "count": 1
   },
   "max_uses": 100000,
   "xp": 0,

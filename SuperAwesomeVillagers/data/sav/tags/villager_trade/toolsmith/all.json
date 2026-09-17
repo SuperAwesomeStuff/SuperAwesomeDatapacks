@@ -1,0 +1,23 @@
+{
+  "values": [
+    "sav:toolsmith/sell_shears",
+    "sav:toolsmith/sell_flint_and_steel",
+    "sav:toolsmith/sell_bucket",
+    "sav:toolsmith/sell_copper_pickaxe",
+    "sav:toolsmith/sell_copper_axe",
+    "sav:toolsmith/sell_copper_shovel",
+    "sav:toolsmith/sell_copper_hoe",
+    "sav:toolsmith/sell_iron_pickaxe",
+    "sav:toolsmith/sell_iron_axe",
+    "sav:toolsmith/sell_iron_shovel",
+    "sav:toolsmith/sell_iron_hoe",
+    "sav:toolsmith/sell_golden_pickaxe",
+    "sav:toolsmith/sell_golden_axe",
+    "sav:toolsmith/sell_golden_shovel",
+    "sav:toolsmith/sell_golden_hoe",
+    "sav:toolsmith/sell_diamond_pickaxe",
+    "sav:toolsmith/sell_diamond_axe",
+    "sav:toolsmith/sell_diamond_shovel",
+    "sav:toolsmith/sell_diamond_hoe"
+  ]
+}
