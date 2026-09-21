@@ -17,8 +17,8 @@ The project targets Minecraft Java Edition 26.3. Super Awesome Enchanting is rea
 
 | Pack | Status | Description |
 | --- | --- | --- |
-| [Super Awesome Enchanting](./SuperAwesomeEnchanting/README.md) | Playtest | Replaces random enchanting with deterministic catalyst upgrades, adds enchantment transfer, and replaces Mending with Unbreakable. |
-| [Super Awesome Villagers](./SuperAwesomeVillagers/README.md) | In design | Replaces random, limited Villager trades with fixed profession catalogs and a simpler resource economy. |
+| [Super Awesome Enchanting](./SuperAwesomeEnchanting/README.md) | Playtest | Replaces random enchanting with deterministic catalyst upgrades, adds enchantment transfer, and replaces Mending with Unbreakable. FancyUI is a required dependency <https://github.com/FancyPotatOS/FancyUI>. Thanks you! @FancyPotatOS |
+| [Super Awesome Villagers](./SuperAwesomeVillagers/README.md) | Playtest | Replaces random, limited Villager trades with fixed profession catalogs and a simpler resource economy. |
 
 ## Possible future packs
 
