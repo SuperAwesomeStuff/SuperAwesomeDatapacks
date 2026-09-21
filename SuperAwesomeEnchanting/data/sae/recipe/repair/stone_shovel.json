@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_transmute",
+  "category": "equipment",
+  "input": "minecraft:stone_shovel",
+  "material": "#minecraft:stone_tool_materials",
+  "result": {
+    "id": "minecraft:stone_shovel",
+    "components": {
+      "minecraft:damage_resistant": {
+        "types": "#sae:repair_marker"
+      }
+    }
+  }
+}

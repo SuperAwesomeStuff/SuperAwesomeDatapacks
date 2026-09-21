@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_transmute",
+  "category": "equipment",
+  "input": "minecraft:wooden_sword",
+  "material": "#minecraft:wooden_tool_materials",
+  "result": {
+    "id": "minecraft:wooden_sword",
+    "components": {
+      "minecraft:damage_resistant": {
+        "types": "#sae:repair_marker"
+      }
+    }
+  }
+}

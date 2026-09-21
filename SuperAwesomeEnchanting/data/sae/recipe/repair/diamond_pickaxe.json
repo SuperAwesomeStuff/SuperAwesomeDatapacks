@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_transmute",
+  "category": "equipment",
+  "input": "minecraft:diamond_pickaxe",
+  "material": "#minecraft:diamond_tool_materials",
+  "result": {
+    "id": "minecraft:diamond_pickaxe",
+    "components": {
+      "minecraft:damage_resistant": {
+        "types": "#sae:repair_marker"
+      }
+    }
+  }
+}

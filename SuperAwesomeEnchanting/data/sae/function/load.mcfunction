@@ -5,7 +5,6 @@ scoreboard objectives add sae.uuid0 dummy
 scoreboard objectives add sae.uuid1 dummy
 scoreboard objectives add sae.uuid2 dummy
 scoreboard objectives add sae.uuid3 dummy
-scoreboard objectives add sae.deaths deathCount
 scoreboard objectives add sae.cooldown dummy
 scoreboard objectives add sae.timer dummy
 scoreboard objectives add sae.vanilla trigger

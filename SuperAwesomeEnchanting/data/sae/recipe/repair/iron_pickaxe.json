@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_transmute",
+  "category": "equipment",
+  "input": "minecraft:iron_pickaxe",
+  "material": "#minecraft:iron_tool_materials",
+  "result": {
+    "id": "minecraft:iron_pickaxe",
+    "components": {
+      "minecraft:damage_resistant": {
+        "types": "#sae:repair_marker"
+      }
+    }
+  }
+}

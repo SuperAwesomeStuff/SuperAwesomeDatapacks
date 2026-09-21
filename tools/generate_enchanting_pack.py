@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PACK = ROOT / "SuperAwesomeEnchanting"
 DATA = PACK / "data"
 VANILLA = ROOT / ".cache/minecraft/26.3/vanilla/data/minecraft"
+ITEM_REPORTS = ROOT / ".cache/minecraft/26.3/reports/reports/minecraft/components/item"
 FANCYUI = ROOT / "FancyUI"
 
 
@@ -250,6 +251,58 @@ def install_recipe() -> None:
         "result": {"id": "minecraft:sponge"},
     })
 
+    repair_recipes: list[str] = []
+    marker = {"types": "#sae:repair_marker"}
+    for path in sorted(ITEM_REPORTS.glob("*.json")):
+        components = json.loads(path.read_text(encoding="utf-8"))["components"]
+        repairable = components.get("minecraft:repairable")
+        if "minecraft:tool" not in components or not repairable:
+            continue
+        recipe_id = f"sae:repair/{path.stem}"
+        repair_recipes.append(recipe_id)
+        write_json(DATA / f"sae/recipe/repair/{path.stem}.json", {
+            "type": "minecraft:crafting_transmute",
+            "category": "equipment",
+            "input": f"minecraft:{path.stem}",
+            "material": repairable["items"],
+            "result": {
+                "id": f"minecraft:{path.stem}",
+                "components": {"minecraft:damage_resistant": marker},
+            },
+        })
+
+    write_json(DATA / "sae/tags/recipe/repair_tools.json", {"values": repair_recipes})
+    write_json(DATA / "sae/tags/damage_type/repair_marker.json", {"values": ["minecraft:generic_kill"]})
+    write_json(DATA / "sae/slot_source/repair_result.json", {
+        "type": "minecraft:filtered",
+        "item_filter": {"components": {"minecraft:damage_resistant": marker}},
+        "slot_source": [
+            {"type": "minecraft:slot_range", "source": "this", "slots": "player.cursor"},
+            {"type": "minecraft:slot_range", "source": "this", "slots": "inventory.*"},
+            {"type": "minecraft:slot_range", "source": "this", "slots": "hotbar.*"},
+        ],
+    })
+    write_json(DATA / "sae/item_modifier/repair/tool.json", {
+        "type": "minecraft:sequence",
+        "functions": [
+            {"type": "minecraft:set_damage", "damage": 1 / 3, "add": True},
+            {"type": "minecraft:set_components", "components": {"!minecraft:damage_resistant": {}}},
+        ],
+    })
+    write_json(DATA / "sae/advancement/repair_tool.json", {
+        "criteria": {
+            "crafted": {
+                "trigger": "minecraft:recipe_crafted",
+                "conditions": {"recipes": "#sae:repair_tools"},
+            }
+        },
+        "rewards": {"function": "sae:repair/tool"},
+    })
+    write_text(DATA / "sae/function/repair/tool.mcfunction", """
+advancement revoke @s only sae:repair_tool
+item modify entity @s sae:repair_result sae:repair/tool
+""")
+
 
 def install_metadata() -> None:
     write_json(PACK / "pack.mcmeta", {
@@ -297,7 +350,6 @@ scoreboard objectives add sae.uuid0 dummy
 scoreboard objectives add sae.uuid1 dummy
 scoreboard objectives add sae.uuid2 dummy
 scoreboard objectives add sae.uuid3 dummy
-scoreboard objectives add sae.deaths deathCount
 scoreboard objectives add sae.cooldown dummy
 scoreboard objectives add sae.timer dummy
 scoreboard objectives add sae.vanilla trigger
@@ -315,10 +367,7 @@ execute if score #clock sae.clock matches 20.. run scoreboard players set #clock
 execute as @e[type=marker,tag=sae.workstation] at @s run function sae:workstation/tick
 execute as @e[type=hopper_minecart,tag=sae.hopper_blocked] at @s unless entity @e[type=marker,tag=sae.workstation,distance=..2] run data modify entity @s Enabled set value true
 execute as @e[type=hopper_minecart,tag=sae.hopper_blocked] at @s unless entity @e[type=marker,tag=sae.workstation,distance=..2] run tag @s remove sae.hopper_blocked
-execute as @a[scores={sae.deaths=1..}] run function sae:escrow/on_death
-scoreboard players set @a[scores={sae.deaths=1..}] sae.deaths 0
 scoreboard players remove @a[scores={sae.cooldown=1..}] sae.cooldown 1
-execute as @a at @s run function sae:escrow/return
 scoreboard players enable @a sae.vanilla
 execute as @a[scores={sae.vanilla=1..}] at @s run function sae:workstation/restore_vanilla/start
 scoreboard players set @a[scores={sae.vanilla=1..}] sae.vanilla 0
@@ -379,7 +428,7 @@ execute as @n[type=marker,tag=sae.workstation,distance=..1] at @s run function s
 """
     write_text(fn / "workstation/place/create.mcfunction", create)
 
-    write_text(fn / "workstation/tick.mcfunction", """
+    write_text(fn / "workstation/tick.mcfunction", f"""
 execute if block ~ ~-1 ~ minecraft:hopper run data modify block ~ ~-1 ~ TransferCooldown set value 20
 execute if block ~ ~1 ~ minecraft:hopper run data modify block ~ ~1 ~ TransferCooldown set value 20
 execute if block ~1 ~ ~ minecraft:hopper run data modify block ~1 ~ ~ TransferCooldown set value 20
@@ -388,75 +437,19 @@ execute if block ~ ~ ~1 minecraft:hopper run data modify block ~ ~ ~1 TransferCo
 execute if block ~ ~ ~-1 minecraft:hopper run data modify block ~ ~ ~-1 TransferCooldown set value 20
 tag @e[type=hopper_minecart,distance=..2] add sae.hopper_blocked
 execute as @e[type=hopper_minecart,distance=..2] run data modify entity @s Enabled set value false
-execute if entity @s[tag=sae.session] run function sae:workstation/session/check_owner
 execute if score @s sae.timer matches 1.. run scoreboard players remove @s sae.timer 1
 execute if score @s sae.timer matches 0 run data remove entity @s data.sae.armed
 execute if data entity @s data.sae.render_pending run function sae:workstation/render
-execute if entity @s[tag=sae.session] if score #clock sae.clock matches 0 run function sae:workstation/render
-execute if entity @s[tag=sae.session] if score #clock sae.clock matches 10 run function sae:workstation/render
-""")
-
-    write_text(fn / "workstation/session/check_owner.mcfunction", """
-scoreboard players set #online sae.tmp 0
-scoreboard players operation #owner0 sae.tmp = @s sae.uuid0
-scoreboard players operation #owner1 sae.tmp = @s sae.uuid1
-scoreboard players operation #owner2 sae.tmp = @s sae.uuid2
-scoreboard players operation #owner3 sae.tmp = @s sae.uuid3
-execute as @a store result score @s sae.uuid0 run data get entity @s UUID[0]
-execute as @a store result score @s sae.uuid1 run data get entity @s UUID[1]
-execute as @a store result score @s sae.uuid2 run data get entity @s UUID[2]
-execute as @a store result score @s sae.uuid3 run data get entity @s UUID[3]
-execute as @a if score @s sae.uuid0 = #owner0 sae.tmp if score @s sae.uuid1 = #owner1 sae.tmp if score @s sae.uuid2 = #owner2 sae.tmp if score @s sae.uuid3 = #owner3 sae.tmp run scoreboard players set #online sae.tmp 1
-execute if score #online sae.tmp matches 0 run function sae:escrow/store
+execute if data block ~ ~ ~ Items[{{Slot:{target_slot}b}}] if score #clock sae.clock matches 0 run function sae:workstation/render
+execute if data block ~ ~ ~ Items[{{Slot:{target_slot}b}}] if score #clock sae.clock matches 10 run function sae:workstation/render
 """)
 
     write_text(fn / "workstation/input_changed.mcfunction", f"""
 scoreboard players set successful_call fancyui.master 0
 data remove entity @s data.sae.armed
 scoreboard players set @s sae.timer 0
-execute unless entity @s[tag=sae.session] if data storage fancyui:data callback_data{{slot:{target_slot}}} if data block ~ ~ ~ Items[{{Slot:{target_slot}b}}] run function sae:workstation/session/claim
-execute unless entity @s[tag=sae.session] if data entity @s {{data:{{sae:{{mode:"transfer"}}}}}} if data storage fancyui:data callback_data{{slot:{destination_slot}}} if data block ~ ~ ~ Items[{{Slot:{destination_slot}b}}] run function sae:workstation/session/claim
-execute if entity @s[tag=sae.session] run function sae:workstation/session/verify_actor
-execute if data entity @s {{data:{{sae:{{mode:"enchant"}}}}}} unless data block ~ ~ ~ Items[{{Slot:{target_slot}b}}] run function sae:workstation/session/release
-execute if data entity @s {{data:{{sae:{{mode:"transfer"}}}}}} unless data block ~ ~ ~ Items[{{Slot:{target_slot}b}}] unless data block ~ ~ ~ Items[{{Slot:{destination_slot}b}}] run function sae:workstation/session/release
 data modify entity @s data.sae.page set value 0
 function sae:workstation/render
-""")
-    write_text(fn / "workstation/session/claim.mcfunction", """
-tag @s add sae.session
-execute store result score @s sae.uuid0 run data get entity @p[distance=..8,sort=nearest,limit=1] UUID[0]
-execute store result score @s sae.uuid1 run data get entity @p[distance=..8,sort=nearest,limit=1] UUID[1]
-execute store result score @s sae.uuid2 run data get entity @p[distance=..8,sort=nearest,limit=1] UUID[2]
-execute store result score @s sae.uuid3 run data get entity @p[distance=..8,sort=nearest,limit=1] UUID[3]
-function sae:workstation/session/snapshot
-""")
-    write_text(fn / "workstation/session/verify_actor.mcfunction", """
-scoreboard players set #actor_ok sae.tmp 0
-execute store result score #actor0 sae.tmp run data get entity @p[distance=..8,sort=nearest,limit=1] UUID[0]
-execute store result score #actor1 sae.tmp run data get entity @p[distance=..8,sort=nearest,limit=1] UUID[1]
-execute store result score #actor2 sae.tmp run data get entity @p[distance=..8,sort=nearest,limit=1] UUID[2]
-execute store result score #actor3 sae.tmp run data get entity @p[distance=..8,sort=nearest,limit=1] UUID[3]
-execute if score #actor0 sae.tmp = @s sae.uuid0 if score #actor1 sae.tmp = @s sae.uuid1 if score #actor2 sae.tmp = @s sae.uuid2 if score #actor3 sae.tmp = @s sae.uuid3 run scoreboard players set #actor_ok sae.tmp 1
-execute if score #actor_ok sae.tmp matches 1 run function sae:workstation/session/snapshot
-execute if score #actor_ok sae.tmp matches 0 run function sae:workstation/session/conflict
-""")
-    write_text(fn / "workstation/session/snapshot.mcfunction", f"""
-data remove entity @s data.sae.snapshot
-execute if data block ~ ~ ~ Items[{{Slot:{target_slot}b}}] run data modify entity @s data.sae.snapshot.target set from block ~ ~ ~ Items[{{Slot:{target_slot}b}}]
-execute if data entity @s {{data:{{sae:{{mode:"transfer"}}}}}} if data block ~ ~ ~ Items[{{Slot:{destination_slot}b}}] run data modify entity @s data.sae.snapshot.destination set from block ~ ~ ~ Items[{{Slot:{destination_slot}b}}]
-""")
-    write_text(fn / "workstation/session/release.mcfunction", """
-tag @s remove sae.session
-data remove entity @s data.sae.owner
-data remove entity @s data.sae.snapshot
-data remove entity @s data.sae.armed
-scoreboard players set @s sae.timer 0
-""")
-    write_text(fn / "workstation/session/conflict.mcfunction", f"""
-execute if data storage fancyui:data callback_data{{slot:{target_slot}}} run function sae:workstation/drop_slot/{target_slot}
-execute if data storage fancyui:data callback_data{{slot:{destination_slot}}} run function sae:workstation/drop_slot/{destination_slot}
-function sae:escrow/store
-tellraw @a[distance=..8] [{{"text":"[Enchanting] ","color":"dark_aqua"}},{{"text":"The operation was cancelled because another player changed the Workstation.","color":"red"}}]
 """)
 
     for slot in (target_slot, destination_slot):
@@ -478,20 +471,7 @@ execute if data storage fancyui:data button.components."minecraft:custom_data".s
 execute if data storage fancyui:data button.components."minecraft:custom_data".sae{action:"transfer_take"} run function sae:workstation/transfer_take
 function sae:workstation/render
 """)
-    write_text(fn / "workstation/control/check_owner.mcfunction", """
-scoreboard players set #actor_ok sae.tmp 1
-execute if entity @s[tag=sae.session] run function sae:workstation/session/check_clicker
-execute unless score #actor_ok sae.tmp matches 1 run playsound minecraft:block.note_block.bass master @a[tag=fancyui.button.clicker] ~ ~ ~ 0.6 0.7
-execute unless score #actor_ok sae.tmp matches 1 run function sae:workstation/control/reject_non_owner
-""")
-    write_text(fn / "workstation/control/reject_non_owner.mcfunction", """
-function sae:workstation/session/tag_owner
-tellraw @a[tag=fancyui.button.clicker] [{"text":"This Workstation belongs to ","color":"red"},{"selector":"@a[tag=sae.owner]","color":"yellow"},{"text":".","color":"red"}]
-tag @a remove sae.owner
-""")
     write_text(fn / "workstation/mode_toggle.mcfunction", f"""
-function sae:workstation/control/check_owner
-execute unless score #actor_ok sae.tmp matches 1 run return 0
 execute if data entity @s {{data:{{sae:{{mode:"transfer"}}}}}} if data block ~ ~ ~ Items[{{Slot:{destination_slot}b}}] run return run playsound minecraft:block.note_block.bass master @a[tag=fancyui.button.clicker] ~ ~ ~ 0.6 0.7
 execute if data entity @s {{data:{{sae:{{mode:"transfer"}}}}}} run return run function sae:workstation/set_mode_enchant
 function sae:workstation/destination_guard/hide
@@ -522,8 +502,6 @@ data remove entity @s data.sae.armed
 scoreboard players set @s sae.timer 0
 """)
     write_text(fn / "workstation/page_toggle.mcfunction", """
-function sae:workstation/control/check_owner
-execute unless score #actor_ok sae.tmp matches 1 run return 0
 execute unless data entity @s data.sae.book_target run return 0
 execute if data entity @s {data:{sae:{page:1}}} run return run function sae:workstation/set_page_zero
 data modify entity @s data.sae.page set value 1
@@ -544,18 +522,10 @@ scoreboard players set @s sae.timer 0
 data remove entity @s data.sae.render_pending
 {fixed_slot_guards}
 execute if data entity @s data.sae.render_pending run return 0
-function sae:workstation/session/tag_owner
+tag @a remove sae.actor
+tag @p[distance=..8,sort=nearest,limit=1] add sae.actor
 function sae:workstation/options/render
-tag @a remove sae.owner
-""")
-    write_text(fn / "workstation/session/tag_owner.mcfunction", """
-tag @a remove sae.owner
-execute unless entity @s[tag=sae.session] run return 0
-scoreboard players operation #owner0 sae.tmp = @s sae.uuid0
-scoreboard players operation #owner1 sae.tmp = @s sae.uuid1
-scoreboard players operation #owner2 sae.tmp = @s sae.uuid2
-scoreboard players operation #owner3 sae.tmp = @s sae.uuid3
-execute as @a if score @s sae.uuid0 = #owner0 sae.tmp if score @s sae.uuid1 = #owner1 sae.tmp if score @s sae.uuid2 = #owner2 sae.tmp if score @s sae.uuid3 = #owner3 sae.tmp run tag @s add sae.owner
+tag @a remove sae.actor
 """)
 
     write_text(fn / "workstation/on_break.mcfunction", """
@@ -570,11 +540,9 @@ kill @s
 
     write_text(fn / "uninstall.mcfunction", """
 execute unless entity @s[type=player] run return run tellraw @a [{"text":"[Super Awesome Enchanting] ","color":"dark_aqua"},{"text":"Run /function sae:uninstall as an in-game administrator, not from the server console.","color":"red"}]
-execute as @a at @s run function sae:escrow/return
 function sae:uninstall/registry_start
-function sae:uninstall/drain_escrow
 kill @e[type=item,predicate=fancyui:ui/safety/is_fixed]
-tellraw @s [{"text":"[Super Awesome Enchanting] ","color":"dark_aqua","bold":true},{"text":"Workstations were restored. Any offline-owner escrow was returned here. Remove the datapack before restarting.","color":"yellow"}]
+tellraw @s [{"text":"[Super Awesome Enchanting] ","color":"dark_aqua","bold":true},{"text":"Workstations were restored. Remove the datapack before restarting.","color":"yellow"}]
 """)
     write_text(fn / "workstation/uninstall_one.mcfunction", f"""
 function sae:workstation/drop_slot/{target_slot}
@@ -637,23 +605,6 @@ $execute in $(dimension) positioned $(x) $(y) $(z) as @e[type=marker,tag=sae.wor
 $execute in $(dimension) positioned $(x) $(y) $(z) unless entity @e[type=marker,tag=sae.workstation,distance=..1,limit=1] run setblock ~ ~ ~ minecraft:enchanting_table
 $execute if score #was_forceloaded sae.tmp matches 0 in $(dimension) positioned $(x) $(y) $(z) run forceload remove ~ ~
 """)
-    write_text(fn / "uninstall/drain_escrow.mcfunction", """
-execute unless data storage sae:escrow entries[0] run return 0
-data modify storage sae:escrow returning set from storage sae:escrow entries[0]
-data remove storage sae:escrow entries[0]
-function sae:uninstall/spawn_escrow_items
-data remove storage sae:escrow returning
-function sae:uninstall/drain_escrow
-""")
-    write_text(fn / "uninstall/spawn_escrow_items.mcfunction", """
-execute unless data storage sae:escrow returning.items[0] run return 0
-summon item ~ ~1 ~ {Item:{id:"minecraft:stone",count:1},Tags:["sae.uninstall_return"]}
-data modify entity @n[type=item,tag=sae.uninstall_return,distance=..3] Item set from storage sae:escrow returning.items[0]
-tag @n[type=item,tag=sae.uninstall_return,distance=..3] remove sae.uninstall_return
-data remove storage sae:escrow returning.items[0]
-function sae:uninstall/spawn_escrow_items
-""")
-
     direct_slots = (
         [f"inventory.{i}" for i in range(27)]
         + [f"hotbar.{i}" for i in range(9)]
@@ -675,82 +626,6 @@ function sae:uninstall/spawn_escrow_items
     })
     write_json(DATA / "sae/item_modifier/maintenance/repair_unbreakable.json", {"type": "minecraft:set_components", "components": {"minecraft:damage": 0}})
     write_json(DATA / "sae/item_modifier/maintenance/clear_repair_cost.json", {"type": "minecraft:set_components", "components": {"minecraft:repair_cost": 0}})
-
-    # Escrow is a persistent list of snapshots. Returned stacks spawn owner-bound at login.
-    write_text(fn / "escrow/store.mcfunction", f"""
-data modify storage sae:escrow pending set value {{owner:[I;0,0,0,0],items:[]}}
-execute store result storage sae:escrow pending.owner[0] int 1 run scoreboard players get @s sae.uuid0
-execute store result storage sae:escrow pending.owner[1] int 1 run scoreboard players get @s sae.uuid1
-execute store result storage sae:escrow pending.owner[2] int 1 run scoreboard players get @s sae.uuid2
-execute store result storage sae:escrow pending.owner[3] int 1 run scoreboard players get @s sae.uuid3
-execute if data entity @s data.sae.snapshot.target run data modify storage sae:escrow pending.items append from entity @s data.sae.snapshot.target
-execute if data entity @s data.sae.snapshot.destination run data modify storage sae:escrow pending.items append from entity @s data.sae.snapshot.destination
-execute if data storage sae:escrow pending.items[0] run data modify storage sae:escrow entries append from storage sae:escrow pending
-item replace block ~ ~ ~ container.{target_slot} with air
-scoreboard players set modified_slot fancyui.master {target_slot}
-function fancyui:manual_removal
-execute if data entity @s {{data:{{sae:{{mode:"transfer"}}}}}} run item replace block ~ ~ ~ container.{destination_slot} with air
-execute if data entity @s {{data:{{sae:{{mode:"transfer"}}}}}} run scoreboard players set modified_slot fancyui.master {destination_slot}
-execute if data entity @s {{data:{{sae:{{mode:"transfer"}}}}}} run function fancyui:manual_removal
-data remove storage sae:escrow pending
-function sae:workstation/session/release
-""")
-    write_text(fn / "escrow/on_death.mcfunction", """
-execute as @e[type=marker,tag=sae.workstation,tag=sae.session] at @s run function sae:workstation/session/check_owner_death
-""")
-    write_text(fn / "workstation/session/check_owner_death.mcfunction", """
-scoreboard players set #dead sae.tmp 0
-scoreboard players operation #owner0 sae.tmp = @s sae.uuid0
-scoreboard players operation #owner1 sae.tmp = @s sae.uuid1
-scoreboard players operation #owner2 sae.tmp = @s sae.uuid2
-scoreboard players operation #owner3 sae.tmp = @s sae.uuid3
-execute as @a[scores={sae.deaths=1..}] store result score @s sae.uuid0 run data get entity @s UUID[0]
-execute as @a[scores={sae.deaths=1..}] store result score @s sae.uuid1 run data get entity @s UUID[1]
-execute as @a[scores={sae.deaths=1..}] store result score @s sae.uuid2 run data get entity @s UUID[2]
-execute as @a[scores={sae.deaths=1..}] store result score @s sae.uuid3 run data get entity @s UUID[3]
-execute as @a[scores={sae.deaths=1..}] if score @s sae.uuid0 = #owner0 sae.tmp if score @s sae.uuid1 = #owner1 sae.tmp if score @s sae.uuid2 = #owner2 sae.tmp if score @s sae.uuid3 = #owner3 sae.tmp run scoreboard players set #dead sae.tmp 1
-execute if score #dead sae.tmp matches 1 run function sae:escrow/store
-""")
-    write_text(fn / "escrow/return.mcfunction", """
-execute store result score @s sae.uuid0 run data get entity @s UUID[0]
-execute store result score @s sae.uuid1 run data get entity @s UUID[1]
-execute store result score @s sae.uuid2 run data get entity @s UUID[2]
-execute store result score @s sae.uuid3 run data get entity @s UUID[3]
-data remove storage sae:escrow kept
-function sae:escrow/scan
-""")
-    write_text(fn / "escrow/scan.mcfunction", """
-execute unless data storage sae:escrow entries[0] run return run function sae:escrow/finish_scan
-data modify storage sae:escrow returning set from storage sae:escrow entries[0]
-data remove storage sae:escrow entries[0]
-execute store result score #owner0 sae.tmp run data get storage sae:escrow returning.owner[0]
-execute store result score #owner1 sae.tmp run data get storage sae:escrow returning.owner[1]
-execute store result score #owner2 sae.tmp run data get storage sae:escrow returning.owner[2]
-execute store result score #owner3 sae.tmp run data get storage sae:escrow returning.owner[3]
-scoreboard players set #escrow_match sae.tmp 0
-execute if score #owner0 sae.tmp = @s sae.uuid0 if score #owner1 sae.tmp = @s sae.uuid1 if score #owner2 sae.tmp = @s sae.uuid2 if score #owner3 sae.tmp = @s sae.uuid3 run scoreboard players set #escrow_match sae.tmp 1
-execute if score #escrow_match sae.tmp matches 1 run function sae:escrow/return_entry
-execute unless score #escrow_match sae.tmp matches 1 run data modify storage sae:escrow kept append from storage sae:escrow returning
-data remove storage sae:escrow returning
-function sae:escrow/scan
-""")
-    write_text(fn / "escrow/return_entry.mcfunction", """
-function sae:escrow/spawn_items
-tellraw @s [{"text":"[Enchanting] ","color":"dark_aqua"},{"text":"Your interrupted Workstation items were returned.","color":"green"}]
-""")
-    write_text(fn / "escrow/finish_scan.mcfunction", """
-data modify storage sae:escrow entries set from storage sae:escrow kept
-data remove storage sae:escrow kept
-""")
-    write_text(fn / "escrow/spawn_items.mcfunction", """
-execute unless data storage sae:escrow returning.items[0] run return 0
-summon item ~ ~1 ~ {Item:{id:"minecraft:stone",count:1},Tags:["sae.escrow_return"],PickupDelay:0s}
-data modify entity @n[type=item,tag=sae.escrow_return,distance=..3] Item set from storage sae:escrow returning.items[0]
-data modify entity @n[type=item,tag=sae.escrow_return,distance=..3] Owner set from entity @s UUID
-tag @n[type=item,tag=sae.escrow_return,distance=..3] remove sae.escrow_return
-data remove storage sae:escrow returning.items[0]
-function sae:escrow/spawn_items
-""")
 
     # Item-first Workstation UI. FancyUI slot roles are fixed at initialization;
     # modes therefore restyle the same controls rather than rebuilding the chest.
@@ -787,7 +662,7 @@ function sae:escrow/spawn_items
         for inventory_slot in range(36):
             lines.extend([
                 "scoreboard players set #slot_count sae.tmp 0",
-                f'execute as @a[tag=sae.owner] store result score #slot_count sae.tmp run data get entity @s Inventory[{{Slot:{inventory_slot}b,id:"minecraft:{catalyst}"}}].count',
+                f'execute as @a[tag=sae.actor] store result score #slot_count sae.tmp run data get entity @s Inventory[{{Slot:{inventory_slot}b,id:"minecraft:{catalyst}"}}].count',
                 "scoreboard players operation #catalyst_count sae.tmp += #slot_count sae.tmp",
             ])
         write_text(fn / f"workstation/inventory/count/{catalyst}.mcfunction", "\n".join(lines))
@@ -878,10 +753,10 @@ execute if score #available sae.tmp matches 1 run data modify storage sae:runtim
             "execute if score #catalyst_count sae.tmp < #required sae.tmp run function sae:workstation/options/add_missing_lore",
             "execute if score #catalyst_count sae.tmp < #required sae.tmp run scoreboard players set #available sae.tmp 0",
             "scoreboard players set #levels sae.tmp 0",
-            "execute as @a[tag=sae.owner] store result score #levels sae.tmp run experience query @s levels",
+            "execute as @a[tag=sae.actor] store result score #levels sae.tmp run experience query @s levels",
             "scoreboard players set #level_ok sae.tmp 0",
             "execute if score #levels sae.tmp >= #cost sae.tmp run scoreboard players set #level_ok sae.tmp 1",
-            "execute if entity @a[tag=sae.owner,gamemode=creative] run scoreboard players set #level_ok sae.tmp 1",
+            "execute if entity @a[tag=sae.actor,gamemode=creative] run scoreboard players set #level_ok sae.tmp 1",
             "execute unless score #level_ok sae.tmp matches 1 run data modify storage sae:runtime option.lore append value {text:\"Insufficient levels\",color:\"red\",italic:false}",
             "execute unless score #level_ok sae.tmp matches 1 run scoreboard players set #available sae.tmp 0",
         ])
@@ -951,10 +826,10 @@ execute if score #available sae.tmp matches 1 run data modify storage sae:runtim
             "execute if score #catalyst_count sae.tmp < #required sae.tmp run function sae:workstation/options/add_missing_lore",
             "execute if score #catalyst_count sae.tmp < #required sae.tmp run scoreboard players set #available sae.tmp 0",
             "scoreboard players set #levels sae.tmp 0",
-            "execute as @a[tag=sae.owner] store result score #levels sae.tmp run experience query @s levels",
+            "execute as @a[tag=sae.actor] store result score #levels sae.tmp run experience query @s levels",
             "scoreboard players set #level_ok sae.tmp 0",
             "execute if score #levels sae.tmp >= #cost sae.tmp run scoreboard players set #level_ok sae.tmp 1",
-            "execute if entity @a[tag=sae.owner,gamemode=creative] run scoreboard players set #level_ok sae.tmp 1",
+            "execute if entity @a[tag=sae.actor,gamemode=creative] run scoreboard players set #level_ok sae.tmp 1",
             "execute unless score #level_ok sae.tmp matches 1 run data modify storage sae:runtime option.lore append value {text:\"Insufficient levels\",color:\"red\",italic:false}",
             "execute unless score #level_ok sae.tmp matches 1 run scoreboard players set #available sae.tmp 0",
         ])
@@ -1032,18 +907,16 @@ execute if data entity @s {data:{sae:{page:1}}} run data modify block ~ ~ ~ Item
     # Selection validation is independent from rendering and always rechecks live
     # target, inventory, conflicts, tiers, and experience before mutation.
     write_text(fn / "workstation/select_option.mcfunction", """
-function sae:workstation/control/check_owner
-execute unless score #actor_ok sae.tmp matches 1 run return 0
 execute if entity @a[tag=fancyui.button.clicker,scores={sae.cooldown=1..}] run return run playsound minecraft:block.note_block.bass master @a[tag=fancyui.button.clicker] ~ ~ ~ 0.6 0.7
-tag @a remove sae.owner
-tag @a[tag=fancyui.button.clicker] add sae.owner
+tag @a remove sae.actor
+tag @a[tag=fancyui.button.clicker] add sae.actor
 scoreboard players set #valid sae.tmp 0
 data remove entity @s data.sae.pending
 data remove entity @s data.sae.enchantment
 data remove entity @s data.sae.catalyst
 data remove entity @s data.sae.curse
 function sae:enchant/validate_selection
-tag @a remove sae.owner
+tag @a remove sae.actor
 execute unless score #valid sae.tmp matches 1 run return run playsound minecraft:block.note_block.bass master @a[tag=fancyui.button.clicker] ~ ~ ~ 0.6 0.7
 execute if data entity @s data.sae{curse:true} run return run function sae:workstation/select_curse
 function sae:workstation/apply_selection
@@ -1082,8 +955,8 @@ function sae:workstation/apply_selection
             f"function sae:workstation/inventory/count/{catalyst}",
             "execute if score #catalyst_count sae.tmp < #required sae.tmp run return 0",
             "scoreboard players set #levels sae.tmp 0",
-            "execute as @a[tag=sae.owner] store result score #levels sae.tmp run experience query @s levels",
-            "execute unless entity @a[tag=sae.owner,gamemode=creative] if score #levels sae.tmp < #cost sae.tmp run return 0",
+            "execute as @a[tag=sae.actor] store result score #levels sae.tmp run experience query @s levels",
+            "execute unless entity @a[tag=sae.actor,gamemode=creative] if score #levels sae.tmp < #cost sae.tmp run return 0",
             "scoreboard players set #valid sae.tmp 1",
             f'data modify entity @s data.sae.enchantment set value "minecraft:{enchantment}"',
             f'data modify entity @s data.sae.catalyst set value "{catalyst}"',
@@ -1120,8 +993,8 @@ function sae:workstation/apply_selection
             f"function sae:workstation/inventory/count/{catalyst}",
             "execute if score #catalyst_count sae.tmp < #required sae.tmp run return 0",
             "scoreboard players set #levels sae.tmp 0",
-            "execute as @a[tag=sae.owner] store result score #levels sae.tmp run experience query @s levels",
-            "execute unless entity @a[tag=sae.owner,gamemode=creative] if score #levels sae.tmp < #cost sae.tmp run return 0",
+            "execute as @a[tag=sae.actor] store result score #levels sae.tmp run experience query @s levels",
+            "execute unless entity @a[tag=sae.actor,gamemode=creative] if score #levels sae.tmp < #cost sae.tmp run return 0",
             "scoreboard players set #valid sae.tmp 1",
             f'data modify entity @s data.sae.catalyst set value "{catalyst}"',
             f'data modify entity @s data.sae.curse set value {str(any(value in {"binding_curse", "vanishing_curse"} for value in enchantments)).lower()}',
@@ -1159,34 +1032,50 @@ scoreboard players set @a[tag=fancyui.button.clicker] sae.cooldown 6
 data remove entity @s data.sae.armed
 scoreboard players set @s sae.timer 0
 playsound minecraft:block.enchantment_table.use master @a[tag=fancyui.button.clicker] ~ ~ ~ 1 1
-function sae:workstation/session/snapshot
 """)
     write_text(fn / "transfer/deliver.mcfunction", """
 execute as @e[type=marker,tag=fancyui.container] at @s if data entity @s data.sae.pending_delivery run function sae:transfer/deliver_one
 """)
     write_text(fn / "transfer/deliver_one.mcfunction", f"""
-function sae:workstation/session/tag_owner
+function sae:transfer/tag_recipient
 scoreboard players set #delivered sae.tmp 0
-execute if entity @a[tag=sae.owner,limit=1] unless items entity @a[tag=sae.owner,limit=1] player.cursor * run function sae:transfer/deliver_cursor
+execute if entity @a[tag=sae.recipient,limit=1] unless items entity @a[tag=sae.recipient,limit=1] player.cursor * run function sae:transfer/deliver_cursor
 execute if score #delivered sae.tmp matches 0 run function sae:transfer/deliver_drop
 item replace block ~ ~ ~ container.{destination_slot} with air
 scoreboard players set modified_slot fancyui.master {destination_slot}
 function fancyui:manual_removal
 data remove entity @s data.sae.pending_delivery
-tag @a remove sae.owner
-function sae:workstation/session/release
+tag @a remove sae.recipient
 function sae:workstation/render
 """)
     write_text(fn / "transfer/deliver_cursor.mcfunction", f"""
-item replace entity @a[tag=sae.owner,limit=1] player.cursor from block ~ ~ ~ container.{destination_slot}
+item replace entity @a[tag=sae.recipient,limit=1] player.cursor from block ~ ~ ~ container.{destination_slot}
 scoreboard players set #delivered sae.tmp 1
 """)
     write_text(fn / "transfer/deliver_drop.mcfunction", f"""
 summon item ~ ~1 ~ {{Item:{{id:"minecraft:stone",count:1}},Tags:["sae.transfer_result"]}}
 data modify entity @n[type=item,tag=sae.transfer_result,distance=..3] Item set from block ~ ~ ~ Items[{{Slot:{destination_slot}b}}]
-execute if entity @a[tag=sae.owner,limit=1] run data modify entity @n[type=item,tag=sae.transfer_result,distance=..3] Owner set from entity @a[tag=sae.owner,limit=1] UUID
+execute if entity @a[tag=sae.recipient,limit=1] run data modify entity @n[type=item,tag=sae.transfer_result,distance=..3] Owner set from entity @a[tag=sae.recipient,limit=1] UUID
 tag @n[type=item,tag=sae.transfer_result,distance=..3] remove sae.transfer_result
 scoreboard players set #delivered sae.tmp 1
+""")
+    write_text(fn / "transfer/capture_recipient.mcfunction", """
+execute store result score @s sae.uuid0 run data get entity @a[tag=sae.actor,limit=1] UUID[0]
+execute store result score @s sae.uuid1 run data get entity @a[tag=sae.actor,limit=1] UUID[1]
+execute store result score @s sae.uuid2 run data get entity @a[tag=sae.actor,limit=1] UUID[2]
+execute store result score @s sae.uuid3 run data get entity @a[tag=sae.actor,limit=1] UUID[3]
+""")
+    write_text(fn / "transfer/tag_recipient.mcfunction", """
+tag @a remove sae.recipient
+scoreboard players operation #recipient0 sae.tmp = @s sae.uuid0
+scoreboard players operation #recipient1 sae.tmp = @s sae.uuid1
+scoreboard players operation #recipient2 sae.tmp = @s sae.uuid2
+scoreboard players operation #recipient3 sae.tmp = @s sae.uuid3
+execute as @a store result score @s sae.uuid0 run data get entity @s UUID[0]
+execute as @a store result score @s sae.uuid1 run data get entity @s UUID[1]
+execute as @a store result score @s sae.uuid2 run data get entity @s UUID[2]
+execute as @a store result score @s sae.uuid3 run data get entity @s UUID[3]
+execute as @a if score @s sae.uuid0 = #recipient0 sae.tmp if score @s sae.uuid1 = #recipient1 sae.tmp if score @s sae.uuid2 = #recipient2 sae.tmp if score @s sae.uuid3 = #recipient3 sae.tmp run tag @s add sae.recipient
 """)
     consume_dispatch = []
     for catalyst in distinct_catalysts:
@@ -1196,18 +1085,6 @@ scoreboard players set #delivered sae.tmp 1
         )
     write_text(fn / "workstation/consume_selected_catalyst.mcfunction", "\n".join(consume_dispatch))
 
-    write_text(fn / "workstation/session/check_clicker.mcfunction", """
-scoreboard players set #actor_ok sae.tmp 0
-scoreboard players operation #owner0 sae.tmp = @s sae.uuid0
-scoreboard players operation #owner1 sae.tmp = @s sae.uuid1
-scoreboard players operation #owner2 sae.tmp = @s sae.uuid2
-scoreboard players operation #owner3 sae.tmp = @s sae.uuid3
-execute as @a[tag=fancyui.button.clicker] store result score @s sae.uuid0 run data get entity @s UUID[0]
-execute as @a[tag=fancyui.button.clicker] store result score @s sae.uuid1 run data get entity @s UUID[1]
-execute as @a[tag=fancyui.button.clicker] store result score @s sae.uuid2 run data get entity @s UUID[2]
-execute as @a[tag=fancyui.button.clicker] store result score @s sae.uuid3 run data get entity @s UUID[3]
-execute as @a[tag=fancyui.button.clicker] if score @s sae.uuid0 = #owner0 sae.tmp if score @s sae.uuid1 = #owner1 sae.tmp if score @s sae.uuid2 = #owner2 sae.tmp if score @s sae.uuid3 = #owner3 sae.tmp run scoreboard players set #actor_ok sae.tmp 1
-""")
     write_text(fn / "enchant/apply_book.mcfunction", f"""
 data modify block ~ ~ ~ Items[{{Slot:{target_slot}b}}].id set value "minecraft:enchanted_book"
 execute unless data block ~ ~ ~ Items[{{Slot:{target_slot}b}}].components."minecraft:stored_enchantments" run data modify block ~ ~ ~ Items[{{Slot:{target_slot}b}}].components."minecraft:stored_enchantments" set value {{}}
@@ -1293,13 +1170,14 @@ function sae:workstation/charge_levels_macro with storage sae:runtime macro
     write_text(fn / "transfer/preview_valid.mcfunction", """
 scoreboard players set #cost sae.tmp 5
 scoreboard players set #levels sae.tmp 0
-execute as @a[tag=sae.owner] store result score #levels sae.tmp run experience query @s levels
+execute as @a[tag=sae.actor] store result score #levels sae.tmp run experience query @s levels
 data modify entity @s data.sae.transfer_reason set value "Insufficient levels"
-execute unless entity @a[tag=sae.owner,gamemode=creative] if score #levels sae.tmp < #cost sae.tmp run return 0
+execute unless entity @a[tag=sae.actor,gamemode=creative] if score #levels sae.tmp < #cost sae.tmp run return 0
 data modify entity @s data.sae.transfer_reason set value "Ready"
 scoreboard players set #valid sae.tmp 1
 """)
     write_text(fn / "transfer/apply.mcfunction", f"""
+function sae:transfer/capture_recipient
 execute if items block ~ ~ ~ container.{destination_slot} minecraft:book run function sae:transfer/apply_book
 execute unless items block ~ ~ ~ container.{destination_slot} minecraft:book run function sae:transfer/apply_equipment
 scoreboard players set modified_slot fancyui.master {destination_slot}
@@ -1313,7 +1191,6 @@ data remove entity @s data.sae.armed
 scoreboard players set @s sae.timer 0
 playsound minecraft:block.enchantment_table.use master @a[tag=fancyui.button.clicker] ~ ~ ~ 1 1
 data modify entity @s data.sae.pending_delivery set value true
-function sae:workstation/session/snapshot
 schedule function sae:transfer/deliver 1t append
 """)
     write_text(fn / "transfer/apply_book.mcfunction", f"""
@@ -1408,15 +1285,13 @@ execute if score #valid sae.tmp matches 1 if data block ~ ~ ~ Items[{{Slot:{targ
 execute unless score #valid sae.tmp matches 1 run function sae:transfer/control/reason
 """)
     write_text(fn / "workstation/transfer_take.mcfunction", """
-function sae:workstation/control/check_owner
-execute unless score #actor_ok sae.tmp matches 1 run return 0
 execute if entity @a[tag=fancyui.button.clicker,scores={sae.cooldown=1..}] run return run playsound minecraft:block.note_block.bass master @a[tag=fancyui.button.clicker] ~ ~ ~ 0.6 0.7
-tag @a remove sae.owner
-tag @a[tag=fancyui.button.clicker] add sae.owner
+tag @a remove sae.actor
+tag @a[tag=fancyui.button.clicker] add sae.actor
 function sae:transfer/preview
-tag @a remove sae.owner
-execute unless score #valid sae.tmp matches 1 run return run playsound minecraft:block.note_block.bass master @a[tag=fancyui.button.clicker] ~ ~ ~ 0.6 0.7
-function sae:transfer/apply
+execute unless score #valid sae.tmp matches 1 run playsound minecraft:block.note_block.bass master @a[tag=fancyui.button.clicker] ~ ~ ~ 0.6 0.7
+execute if score #valid sae.tmp matches 1 run function sae:transfer/apply
+tag @a remove sae.actor
 """)
 
     write_json(DATA / "minecraft/tags/function/load.json", {"values": ["sae:load"]})

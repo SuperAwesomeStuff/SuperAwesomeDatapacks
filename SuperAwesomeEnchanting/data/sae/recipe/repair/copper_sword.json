@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_transmute",
+  "category": "equipment",
+  "input": "minecraft:copper_sword",
+  "material": "#minecraft:copper_tool_materials",
+  "result": {
+    "id": "minecraft:copper_sword",
+    "components": {
+      "minecraft:damage_resistant": {
+        "types": "#sae:repair_marker"
+      }
+    }
+  }
+}

@@ -26,6 +26,7 @@ execute unless items block ~ ~ ~ container.24 *[minecraft:custom_data~{fancyui:{
 execute unless items block ~ ~ ~ container.25 *[minecraft:custom_data~{fancyui:{fixed:true}}] run data modify entity @s data.sae.render_pending set value true
 execute unless items block ~ ~ ~ container.26 *[minecraft:custom_data~{fancyui:{fixed:true}}] run data modify entity @s data.sae.render_pending set value true
 execute if data entity @s data.sae.render_pending run return 0
-function sae:workstation/session/tag_owner
+tag @a remove sae.actor
+tag @p[distance=..8,sort=nearest,limit=1] add sae.actor
 function sae:workstation/options/render
-tag @a remove sae.owner
+tag @a remove sae.actor

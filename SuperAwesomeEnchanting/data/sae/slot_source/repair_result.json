@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:filtered",
+  "item_filter": {
+    "components": {
+      "minecraft:damage_resistant": {
+        "types": "#sae:repair_marker"
+      }
+    }
+  },
+  "slot_source": [
+    {
+      "type": "minecraft:slot_range",
+      "source": "this",
+      "slots": "player.cursor"
+    },
+    {
+      "type": "minecraft:slot_range",
+      "source": "this",
+      "slots": "inventory.*"
+    },
+    {
+      "type": "minecraft:slot_range",
+      "source": "this",
+      "slots": "hotbar.*"
+    }
+  ]
+}

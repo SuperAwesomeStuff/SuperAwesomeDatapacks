@@ -9,8 +9,8 @@ scoreboard players set #required sae.tmp 1
 function sae:workstation/inventory/count/ender_pearl
 execute if score #catalyst_count sae.tmp < #required sae.tmp run return 0
 scoreboard players set #levels sae.tmp 0
-execute as @a[tag=sae.owner] store result score #levels sae.tmp run experience query @s levels
-execute unless entity @a[tag=sae.owner,gamemode=creative] if score #levels sae.tmp < #cost sae.tmp run return 0
+execute as @a[tag=sae.actor] store result score #levels sae.tmp run experience query @s levels
+execute unless entity @a[tag=sae.actor,gamemode=creative] if score #levels sae.tmp < #cost sae.tmp run return 0
 scoreboard players set #valid sae.tmp 1
 data modify entity @s data.sae.catalyst set value "ender_pearl"
 data modify entity @s data.sae.curse set value false

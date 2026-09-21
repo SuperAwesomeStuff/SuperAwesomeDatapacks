@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_transmute",
+  "category": "equipment",
+  "input": "minecraft:copper_pickaxe",
+  "material": "#minecraft:copper_tool_materials",
+  "result": {
+    "id": "minecraft:copper_pickaxe",
+    "components": {
+      "minecraft:damage_resistant": {
+        "types": "#sae:repair_marker"
+      }
+    }
+  }
+}

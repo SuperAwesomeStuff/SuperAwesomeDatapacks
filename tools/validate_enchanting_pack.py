@@ -210,8 +210,14 @@ def main() -> int:
     if "function sae:workstation/destination_guard/show" not in enchant_controls:
         errors.append("Enchant mode leaves the Transfer destination watch exposed")
     input_changed = (DATA / "sae/function/workstation/input_changed.mcfunction").read_text(encoding="utf-8")
-    if "return_inactive_destination" in input_changed or 'callback_data{slot:11}' not in input_changed or input_changed.count("function sae:workstation/session/claim") < 2:
-        errors.append("Transfer item inserted before Source is dropped instead of claiming a session and remaining in its slot")
+    if "session/" in generated_functions or "sae.session" in generated_functions:
+        errors.append("workstation still locks shared inputs behind an owner session")
+    if "sae:escrow" in generated_functions or (DATA / "sae/function/escrow").exists():
+        errors.append("workstation still snapshots or escrows shared container inputs")
+    if "verify_actor" in input_changed or "conflict" in input_changed:
+        errors.append("shared input changes still run multiplayer conflict recovery")
+    if 'callback_data{slot:11}' in input_changed:
+        errors.append("shared destination changes still receive special ownership handling")
     transfer_render = (DATA / "sae/function/transfer/render.mcfunction").read_text(encoding="utf-8")
     if "].id set" in enchant_controls or "].id set" in transfer_render:
         errors.append("mode-specific controls replace FancyUI's fixed physical items")
@@ -236,6 +242,53 @@ def main() -> int:
         errors.append("transfer mutation does not synchronize FancyUI's watched source and result slots")
     if "function fancyui:manual_placement" not in apply_selection:
         errors.append("enchanting mutation does not synchronize FancyUI's watched target slot")
+
+    # Material repairs are transmute recipes so the crafted tool keeps its
+    # enchantments, name, and other components. A short-lived component marks
+    # the exact result stack for the recipe-crafted reward, including shift-craft.
+    item_reports = ROOT / ".cache/minecraft/26.3/reports/reports/minecraft/components/item"
+    repairable_tools: dict[str, str] = {}
+    for path in item_reports.glob("*.json"):
+        components = json.loads(path.read_text(encoding="utf-8"))["components"]
+        repairable = components.get("minecraft:repairable")
+        if "minecraft:tool" in components and repairable:
+            repairable_tools[path.stem] = repairable["items"]
+    repair_recipes = DATA / "sae/recipe/repair"
+    actual_repairs = {path.stem for path in repair_recipes.glob("*.json")} if repair_recipes.exists() else set()
+    if actual_repairs != set(repairable_tools):
+        errors.append(
+            f"material repair recipe mismatch: missing={sorted(set(repairable_tools) - actual_repairs)}, "
+            f"extra={sorted(actual_repairs - set(repairable_tools))}"
+        )
+    for item, material in repairable_tools.items():
+        recipe_path = repair_recipes / f"{item}.json"
+        if not recipe_path.exists():
+            continue
+        recipe = json.loads(recipe_path.read_text(encoding="utf-8"))
+        if recipe.get("type") != "minecraft:crafting_transmute" or recipe.get("input") != f"minecraft:{item}" or recipe.get("material") != material:
+            errors.append(f"invalid material repair recipe: {item}")
+        result = recipe.get("result", {})
+        if result.get("id") != f"minecraft:{item}" or "minecraft:damage_resistant" not in result.get("components", {}):
+            errors.append(f"material repair recipe does not preserve and mark its result: {item}")
+    repair_modifier_path = DATA / "sae/item_modifier/repair/tool.json"
+    if not repair_modifier_path.exists():
+        errors.append("material repair item modifier is missing")
+    else:
+        repair_modifier = json.loads(repair_modifier_path.read_text(encoding="utf-8"))
+        functions = repair_modifier.get("functions", [])
+        damage_step = next((step for step in functions if step.get("type") == "minecraft:set_damage"), {})
+        cleanup_step = next((step for step in functions if step.get("type") == "minecraft:set_components"), {})
+        if damage_step.get("add") is not True or damage_step.get("damage") != 1 / 3:
+            errors.append("material repair does not restore one third of maximum durability")
+        if "!minecraft:damage_resistant" not in cleanup_step.get("components", {}):
+            errors.append("material repair does not remove its temporary result marker")
+    repair_advancement_path = DATA / "sae/advancement/repair_tool.json"
+    repair_function_path = DATA / "sae/function/repair/tool.mcfunction"
+    repair_slots_path = DATA / "sae/slot_source/repair_result.json"
+    if not repair_advancement_path.exists() or not repair_function_path.exists() or not repair_slots_path.exists():
+        errors.append("material repair crafting callback is incomplete")
+    elif "item modify entity @s sae:repair_result sae:repair/tool" not in repair_function_path.read_text(encoding="utf-8"):
+        errors.append("material repair callback does not modify the marked crafted stack")
 
     if not (FANCYUI / "pack.mcmeta").exists():
         errors.append("private FancyUI dependency is missing")

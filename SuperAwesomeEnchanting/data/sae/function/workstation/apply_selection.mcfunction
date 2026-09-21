@@ -9,4 +9,3 @@ scoreboard players set @a[tag=fancyui.button.clicker] sae.cooldown 6
 data remove entity @s data.sae.armed
 scoreboard players set @s sae.timer 0
 playsound minecraft:block.enchantment_table.use master @a[tag=fancyui.button.clicker] ~ ~ ~ 1 1
-function sae:workstation/session/snapshot

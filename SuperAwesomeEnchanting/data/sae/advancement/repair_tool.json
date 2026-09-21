@@ -1,0 +1,13 @@
+{
+  "criteria": {
+    "crafted": {
+      "trigger": "minecraft:recipe_crafted",
+      "conditions": {
+        "recipes": "#sae:repair_tools"
+      }
+    }
+  },
+  "rewards": {
+    "function": "sae:repair/tool"
+  }
+}

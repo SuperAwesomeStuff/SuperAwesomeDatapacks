@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_transmute",
+  "category": "equipment",
+  "input": "minecraft:iron_hoe",
+  "material": "#minecraft:iron_tool_materials",
+  "result": {
+    "id": "minecraft:iron_hoe",
+    "components": {
+      "minecraft:damage_resistant": {
+        "types": "#sae:repair_marker"
+      }
+    }
+  }
+}

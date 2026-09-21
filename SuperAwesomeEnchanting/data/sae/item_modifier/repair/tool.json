@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:sequence",
+  "functions": [
+    {
+      "type": "minecraft:set_damage",
+      "damage": 0.3333333333333333,
+      "add": true
+    },
+    {
+      "type": "minecraft:set_components",
+      "components": {
+        "!minecraft:damage_resistant": {}
+      }
+    }
+  ]
+}

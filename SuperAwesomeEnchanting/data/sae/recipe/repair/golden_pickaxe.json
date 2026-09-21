@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_transmute",
+  "category": "equipment",
+  "input": "minecraft:golden_pickaxe",
+  "material": "#minecraft:gold_tool_materials",
+  "result": {
+    "id": "minecraft:golden_pickaxe",
+    "components": {
+      "minecraft:damage_resistant": {
+        "types": "#sae:repair_marker"
+      }
+    }
+  }
+}

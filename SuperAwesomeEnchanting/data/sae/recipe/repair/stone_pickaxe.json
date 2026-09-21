@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_transmute",
+  "category": "equipment",
+  "input": "minecraft:stone_pickaxe",
+  "material": "#minecraft:stone_tool_materials",
+  "result": {
+    "id": "minecraft:stone_pickaxe",
+    "components": {
+      "minecraft:damage_resistant": {
+        "types": "#sae:repair_marker"
+      }
+    }
+  }
+}
