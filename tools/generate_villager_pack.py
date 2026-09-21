@@ -217,6 +217,12 @@ HAND_PRICED: dict[str, int] = {
 # to test for another pack's presence.
 BOOK_EXCLUDED = {"mending", "binding_curse", "vanishing_curse"}
 
+# Librarian prices stay on a short, readable ladder. Fortune is already the
+# most expensive Book, so the playtest price increase does not apply to it.
+BOOK_PRICE_LADDER = (1, 2, 4, 8, 16, 24, 32, 40, 48, 56, 64)
+BOOK_PRICE_MULTIPLIER = 2
+BOOK_PRICE_MULTIPLIER_EXCLUDED = {"fortune"}
+
 
 def write_json(path: Path, value: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -498,14 +504,18 @@ def install_wandering_trader() -> None:
 
 
 def book_price(enchantment: str, index: dict[str, list[dict[str, Any]]]) -> int:
-    """A tier-I Book costs what Super Awesome Enchanting charges for one tier:
-    the catalyst's value plus the usual premium. Combining Books on an Anvil
-    stays the dearer route to high tiers."""
+    """Price a tier-I Book from its catalyst, then round up to the Book ladder."""
     catalyst, required, _ = CATALYSTS[enchantment]
     cost = material_cost(f"minecraft:{catalyst}", index)
     if cost == float("inf"):
         raise SystemExit(f"No value for the {enchantment} catalyst {catalyst}")
-    return max(1, math.ceil(cost * required * PREMIUM))
+    price = max(1, math.ceil(cost * required * PREMIUM))
+    if enchantment not in BOOK_PRICE_MULTIPLIER_EXCLUDED:
+        price *= BOOK_PRICE_MULTIPLIER
+    for tier in BOOK_PRICE_LADDER:
+        if price <= tier:
+            return tier
+    raise SystemExit(f"The {enchantment} Book price {price} exceeds the price ladder")
 
 
 def install_librarian(index: dict[str, list[dict[str, Any]]]) -> None:

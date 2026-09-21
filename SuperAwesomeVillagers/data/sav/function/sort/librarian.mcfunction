@@ -34,11 +34,11 @@ data modify storage sav:stock sorted append from storage sav:stock offers[{"sell
 data modify storage sav:stock sorted append from storage sav:stock offers[{"sell":{"components":{"minecraft:stored_enchantments":{"minecraft:silk_touch":1}}}}]
 data modify storage sav:stock sorted append from storage sav:stock offers[{"sell":{"components":{"minecraft:stored_enchantments":{"minecraft:swift_sneak":1}}}}]
 data modify storage sav:stock sorted append from storage sav:stock offers[{"sell":{"components":{"minecraft:stored_enchantments":{"minecraft:unbreaking":1}}}}]
-data modify storage sav:stock sorted append from storage sav:stock offers[{"sell":{"components":{"minecraft:stored_enchantments":{"minecraft:protection":1}}}}]
 data modify storage sav:stock sorted append from storage sav:stock offers[{"sell":{"components":{"minecraft:stored_enchantments":{"minecraft:density":1}}}}]
 data modify storage sav:stock sorted append from storage sav:stock offers[{"sell":{"components":{"minecraft:stored_enchantments":{"minecraft:looting":1}}}}]
-data modify storage sav:stock sorted append from storage sav:stock offers[{"sell":{"components":{"minecraft:stored_enchantments":{"minecraft:loyalty":1}}}}]
+data modify storage sav:stock sorted append from storage sav:stock offers[{"sell":{"components":{"minecraft:stored_enchantments":{"minecraft:protection":1}}}}]
 data modify storage sav:stock sorted append from storage sav:stock offers[{"sell":{"components":{"minecraft:stored_enchantments":{"minecraft:infinity":1}}}}]
+data modify storage sav:stock sorted append from storage sav:stock offers[{"sell":{"components":{"minecraft:stored_enchantments":{"minecraft:loyalty":1}}}}]
 data modify storage sav:stock sorted append from storage sav:stock offers[{"sell":{"components":{"minecraft:stored_enchantments":{"minecraft:fortune":1}}}}]
 execute store result score #offers sav.stock run data get storage sav:stock offers
 execute store result score #sorted sav.stock run data get storage sav:stock sorted

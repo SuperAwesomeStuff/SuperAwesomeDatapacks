@@ -1,7 +1,7 @@
 {
   "wants": {
     "id": "minecraft:emerald",
-    "count": 2
+    "count": 4
   },
   "gives": {
     "id": "minecraft:enchanted_book",

@@ -107,7 +107,7 @@ COMMANDS = [
     "data get entity @e[type=villager,tag=sav.books,limit=1] Offers.Recipes[-1]",
     "data get entity @e[type=villager,tag=sav.carto,limit=1] Offers.Recipes[-1]",
     "data get entity @e[type=villager,tag=sav.carto,limit=1] equipment",
-    'execute if data entity @e[type=villager,tag=sav.books,limit=1] Offers.Recipes[-1].buy{count:45} if data entity @e[type=villager,tag=sav.books,limit=1] Offers.Recipes[-1].sell{components:{"minecraft:stored_enchantments":{"minecraft:fortune":1}}} run say CHECK Librarian Fortune Book priced from Diamond Block catalyst',
+    'execute if data entity @e[type=villager,tag=sav.books,limit=1] Offers.Recipes[-1].buy{count:48} if data entity @e[type=villager,tag=sav.books,limit=1] Offers.Recipes[-1].sell{components:{"minecraft:stored_enchantments":{"minecraft:fortune":1}}} run say CHECK Librarian Fortune Book rounded to 48 Emeralds',
 ]
 
 
@@ -135,7 +135,7 @@ EXPECTED_MARKERS = [
     "CHECK Wandering Trader offers sorted",
     "CHECK Cleric sells Redstone and Sculk",
     "CHECK Armorer offers sorted by tier",
-    "CHECK Librarian Fortune Book priced from Diamond Block catalyst",
+    "CHECK Librarian Fortune Book rounded to 48 Emeralds",
     "CHECK Cleric Bone at 4 not 16",
     "CHECK Rabbit Hide not both bought and sold",
     "CHECK Villager-harvested Carrot is marked",

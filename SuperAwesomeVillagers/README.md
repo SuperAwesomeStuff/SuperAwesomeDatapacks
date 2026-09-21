@@ -326,52 +326,52 @@ Librarians keep enchanted Books as an alternate route into enchanting.
 - Every Librarian has the complete deterministic Book catalog from the start.
 - Librarians sell the lowest tier of every enchantment except curses.
 - Books combine through vanilla Anvil rules, so reaching a high tier requires exponentially more tier-I Books.
-- **A Book costs what one tier costs in Super Awesome Enchanting:** the Emerald value of its catalyst plus the 25 percent premium, rounded up. Prices read from the Enchanting pack's catalyst table, so the two packs cannot drift apart. Catalysts no Villager trades have hand-set values in the generator. A Book I matches a catalyst tier, while combining Books up to a high tier stays the dearer route.
+- **Book prices start with the cost of one tier in Super Awesome Enchanting:** the Emerald value of its catalyst plus the 25 percent premium. That price is doubled, except for Fortune, then rounded up to 1, 2, 4, 8, 16, 24, 32, 40, 48, 56, or 64 Emeralds. Prices read from the Enchanting pack's catalyst table, so the two packs cannot drift apart. Catalysts no Villager trades have hand-set values in the generator. Combining Books up to a high tier stays the dearer route.
 - Librarians never sell the Mending Book, in any configuration. See below.
 
 <!-- generated:books -->
 | Book | Catalyst per tier | Price |
 | --- | --- | ---: |
-| Bane of Arthropods I | 1 Spider Eye | 1 Emerald |
-| Blast Protection I | 1 Obsidian | 1 Emerald |
-| Breach I | 1 Amethyst Block | 1 Emerald |
-| Channeling I | 1 Lightning Rod | 1 Emerald |
-| Efficiency I | 1 Redstone Block | 1 Emerald |
-| Fire Aspect I | 1 Blaze Rod | 1 Emerald |
-| Fire Protection I | 1 Magma Cream | 1 Emerald |
-| Flame I | 1 Blaze Rod | 1 Emerald |
-| Impaling I | 1 Prismarine Shard | 1 Emerald |
-| Knockback I | 1 Piston | 1 Emerald |
-| Luck of the Sea I | 1 Pufferfish | 1 Emerald |
-| Lure I | 1 Tropical Fish | 1 Emerald |
-| Multishot I | 1 Dispenser | 1 Emerald |
-| Piercing I | 1 Amethyst Block | 1 Emerald |
-| Power I | 1 Amethyst Block | 1 Emerald |
-| Projectile Protection I | 1 Shield | 1 Emerald |
-| Punch I | 1 Piston | 1 Emerald |
-| Quick Charge I | 1 Redstone Block | 1 Emerald |
-| Sharpness I | 1 Amethyst Block | 1 Emerald |
-| Smite I | 1 Glowstone | 1 Emerald |
-| Soul Speed I | 1 Soul Sand | 1 Emerald |
-| Thorns I | 1 Pointed Dripstone | 1 Emerald |
-| Frost Walker I | 1 Blue Ice | 2 Emeralds |
-| Lunge I | 1 Breeze Rod | 2 Emeralds |
-| Sweeping Edge I | 1 Breeze Rod | 2 Emeralds |
-| Wind Burst I | 1 Breeze Rod | 2 Emeralds |
-| Aqua Affinity I | 1 Sponge | 3 Emeralds |
-| Depth Strider I | 1 Nautilus Shell | 3 Emeralds |
-| Feather Falling I | 1 Slime Block | 3 Emeralds |
-| Respiration I | 1 Turtle Scute | 3 Emeralds |
-| Riptide I | 1 Nautilus Shell | 3 Emeralds |
-| Silk Touch I | 1 Slime Block | 3 Emeralds |
-| Swift Sneak I | 1 Sculk Sensor | 3 Emeralds |
-| Unbreaking I | 1 Iron Block | 3 Emeralds |
-| Protection I | 1 Diamond | 5 Emeralds |
-| Density I | 1 Gold Block | 6 Emeralds |
-| Looting I | 1 Gold Block | 6 Emeralds |
-| Loyalty I | 1 Ender Pearl | 10 Emeralds |
-| Infinity I | 64 Spectral Arrow | 12 Emeralds |
-| Fortune I | 1 Diamond Block | 45 Emeralds |
+| Bane of Arthropods I | 1 Spider Eye | 2 Emeralds |
+| Blast Protection I | 1 Obsidian | 2 Emeralds |
+| Breach I | 1 Amethyst Block | 2 Emeralds |
+| Channeling I | 1 Lightning Rod | 2 Emeralds |
+| Efficiency I | 1 Redstone Block | 2 Emeralds |
+| Fire Aspect I | 1 Blaze Rod | 2 Emeralds |
+| Fire Protection I | 1 Magma Cream | 2 Emeralds |
+| Flame I | 1 Blaze Rod | 2 Emeralds |
+| Impaling I | 1 Prismarine Shard | 2 Emeralds |
+| Knockback I | 1 Piston | 2 Emeralds |
+| Luck of the Sea I | 1 Pufferfish | 2 Emeralds |
+| Lure I | 1 Tropical Fish | 2 Emeralds |
+| Multishot I | 1 Dispenser | 2 Emeralds |
+| Piercing I | 1 Amethyst Block | 2 Emeralds |
+| Power I | 1 Amethyst Block | 2 Emeralds |
+| Projectile Protection I | 1 Shield | 2 Emeralds |
+| Punch I | 1 Piston | 2 Emeralds |
+| Quick Charge I | 1 Redstone Block | 2 Emeralds |
+| Sharpness I | 1 Amethyst Block | 2 Emeralds |
+| Smite I | 1 Glowstone | 2 Emeralds |
+| Soul Speed I | 1 Soul Sand | 2 Emeralds |
+| Thorns I | 1 Pointed Dripstone | 2 Emeralds |
+| Frost Walker I | 1 Blue Ice | 4 Emeralds |
+| Lunge I | 1 Breeze Rod | 4 Emeralds |
+| Sweeping Edge I | 1 Breeze Rod | 4 Emeralds |
+| Wind Burst I | 1 Breeze Rod | 4 Emeralds |
+| Aqua Affinity I | 1 Sponge | 8 Emeralds |
+| Depth Strider I | 1 Nautilus Shell | 8 Emeralds |
+| Feather Falling I | 1 Slime Block | 8 Emeralds |
+| Respiration I | 1 Turtle Scute | 8 Emeralds |
+| Riptide I | 1 Nautilus Shell | 8 Emeralds |
+| Silk Touch I | 1 Slime Block | 8 Emeralds |
+| Swift Sneak I | 1 Sculk Sensor | 8 Emeralds |
+| Unbreaking I | 1 Iron Block | 8 Emeralds |
+| Density I | 1 Gold Block | 16 Emeralds |
+| Looting I | 1 Gold Block | 16 Emeralds |
+| Protection I | 1 Diamond | 16 Emeralds |
+| Infinity I | 64 Spectral Arrow | 24 Emeralds |
+| Loyalty I | 1 Ender Pearl | 24 Emeralds |
+| Fortune I | 1 Diamond Block | 48 Emeralds |
 <!-- /generated:books -->
 
 ## Wandering Trader

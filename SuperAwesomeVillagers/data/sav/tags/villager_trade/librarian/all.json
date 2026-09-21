@@ -34,11 +34,11 @@
     "sav:librarian/book_silk_touch",
     "sav:librarian/book_swift_sneak",
     "sav:librarian/book_unbreaking",
-    "sav:librarian/book_protection",
     "sav:librarian/book_density",
     "sav:librarian/book_looting",
-    "sav:librarian/book_loyalty",
+    "sav:librarian/book_protection",
     "sav:librarian/book_infinity",
+    "sav:librarian/book_loyalty",
     "sav:librarian/book_fortune"
   ]
 }
